@@ -1,0 +1,38 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# env files
+.env*.local
+.env
+
+# vercel
+.vercel
+
+# local design assets (brand sheets live in /public once processed)
+/NewestLogo.png
+/55fb16a7-e9fb-44ae-8f0b-971f56603ccf.png
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# local Claude Code settings
+.claude/settings.local.json

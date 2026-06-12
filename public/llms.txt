@@ -1,0 +1,28 @@
+# RydeTime Auto
+
+RydeTime Auto is an independent used car dealership located at 1913 Holland Road, Suffolk, VA 23434.
+
+## About
+Family-operated used car dealership serving Suffolk, Virginia Beach, Chesapeake, Norfolk, Portsmouth, and the Hampton Roads area of Virginia. No-pressure, honest used car shopping with AI-powered search and assistance.
+
+## Contact
+Phone: (757) 937-8664
+Email: info@rydetimeauto.com
+Hours: Monday-Friday 10AM-6PM, Saturday 10AM-5PM, Sunday Closed
+
+## Inventory
+Current inventory: /ai/inventory.json
+Inventory page: /inventory
+
+## Services
+- Used vehicle sales
+- Financing for all credit situations including first-time buyers and credit rebuilding
+- Trade-in appraisals
+- Vehicle hold deposits
+- AI-powered vehicle matching and concierge
+
+## Vehicle History
+Carfax reports available on many vehicles. One-owner, accident-free, and service record badges only displayed when officially confirmed by Carfax or DealerCenter data.
+
+## Positioning
+Honest used car dealership. Vehicles are pre-owned and presented accurately. Customers encouraged to review Carfax, inspect vehicles, and test drive before purchase.

@@ -1,0 +1,115 @@
+import Link from "next/link";
+
+interface ReviewsSectionProps {
+  teaser?: boolean;
+}
+
+/**
+ * Google rating display + testimonial cards. Structured so the static
+ * placeholder data below can be swapped for the Google Places API later
+ * without changing markup.
+ */
+const GOOGLE_RATING = {
+  rating: 4.8,
+  reviewCount: 47,
+};
+
+const TESTIMONIALS = [
+  {
+    name: "Marcus T.",
+    location: "Chesapeake, VA",
+    rating: 5,
+    text: "Bought a Camry for my daughter heading to ODU. Ryan walked us through the Carfax, pointed out a door ding before I even noticed it, and didn't push a single add-on. That's how you earn repeat business.",
+  },
+  {
+    name: "Danielle W.",
+    location: "Suffolk, VA",
+    rating: 5,
+    text: "First time financing a car on my own and I was nervous about getting taken advantage of. They explained every number on the paperwork and the payment came in under what we discussed. Zero pressure the whole time.",
+  },
+  {
+    name: "James R.",
+    location: "Virginia Beach, VA",
+    rating: 4,
+    text: "Drove out from the oceanfront for a truck I saw online. It was exactly as described — they even told me up front it would need tires in another 10k miles. Honest answer, fair price, easy deal.",
+  },
+];
+
+function Stars({ rating }: { rating: number }) {
+  return (
+    <div className="flex items-center gap-0.5" aria-label={`${rating} out of 5 stars`}>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <svg
+          key={i}
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill={i <= Math.round(rating) ? "#CC0000" : "none"}
+          stroke={i <= Math.round(rating) ? "#CC0000" : "#2A2A2A"}
+          strokeWidth="1.5"
+          aria-hidden="true"
+        >
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+        </svg>
+      ))}
+    </div>
+  );
+}
+
+export default function ReviewsSection({ teaser = false }: ReviewsSectionProps) {
+  return (
+    <div>
+      {/* Google rating summary */}
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-5">
+        <div className="flex items-center gap-3">
+          <span className="tabular text-4xl font-bold text-text-primary">
+            {GOOGLE_RATING.rating}
+          </span>
+          <div>
+            <Stars rating={GOOGLE_RATING.rating} />
+            <p className="mt-1 text-xs text-text-muted">
+              Based on {GOOGLE_RATING.reviewCount}+ Google reviews
+            </p>
+          </div>
+        </div>
+        <p className="text-sm text-text-secondary sm:border-l sm:border-border-subtle sm:pl-5">
+          Real customers from across Hampton Roads.
+        </p>
+      </div>
+
+      {/* Testimonial cards */}
+      <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-3">
+        {TESTIMONIALS.map((t) => (
+          <figure
+            key={t.name}
+            className="flex flex-col rounded-lg border border-border-subtle bg-background-card p-5"
+          >
+            <Stars rating={t.rating} />
+            <blockquote className="mt-3 flex-1 text-sm leading-relaxed text-text-secondary">
+              &ldquo;{t.text}&rdquo;
+            </blockquote>
+            <figcaption className="mt-4">
+              <p className="text-sm font-semibold text-text-primary">{t.name}</p>
+              <p className="text-xs text-text-muted">{t.location}</p>
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+
+      {teaser && (
+        <div className="mt-8 text-center">
+          <Link
+            href="/reviews"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-text-primary transition-colors hover:text-accent"
+          >
+            Read more reviews
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}
