@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { CHAT_MODES, type ChatRole, type ChatRequest } from "@/types/chat";
 import { AI_DISCLAIMER, DEALERSHIP } from "@/lib/dealership";
+import ChatMarkdown from "@/components/ChatMarkdown";
 
 interface UiMessage {
   role: ChatRole;
@@ -27,6 +28,10 @@ export default function AIChatWidget() {
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
+  // Mobile keyboard handling: when the on-screen keyboard opens, the visual
+  // viewport shrinks but layout vh does not, hiding the input/send button.
+  // We track the keyboard height and lift the panel above it.
+  const [kbInset, setKbInset] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -49,6 +54,37 @@ export default function AIChatWidget() {
   useEffect(() => {
     if (open) inputRef.current?.focus();
   }, [open]);
+
+  // Track the on-screen keyboard via the VisualViewport API (mobile only).
+  useEffect(() => {
+    if (!open || typeof window === "undefined" || !window.visualViewport) return;
+    const vv = window.visualViewport;
+    const mq = window.matchMedia("(max-width: 767px)");
+    const update = () => {
+      if (!mq.matches) {
+        setKbInset(0);
+        return;
+      }
+      // Space taken by the keyboard at the bottom of the layout viewport.
+      const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      // Ignore small fluctuations (browser chrome); a keyboard is ~200px+.
+      setKbInset(inset > 120 ? inset : 0);
+    };
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, [open]);
+
+  // Keep the latest message and the input in view when the keyboard opens.
+  useEffect(() => {
+    if (kbInset > 0) {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+    }
+  }, [kbInset]);
 
   const send = useCallback(
     async (text: string) => {
@@ -134,7 +170,10 @@ export default function AIChatWidget() {
 
       {/* Panel: bottom sheet (mobile) / side panel (desktop) */}
       {open && (
-        <div className="fixed inset-x-0 bottom-0 z-50 flex h-[80vh] flex-col rounded-t-xl border border-border-subtle bg-background-secondary shadow-2xl shadow-black/60 md:inset-x-auto md:bottom-5 md:right-5 md:h-[600px] md:max-h-[80vh] md:w-[400px] md:rounded-xl">
+        <div
+          style={kbInset > 0 ? { bottom: kbInset, height: `calc(100dvh - ${kbInset}px)` } : undefined}
+          className="fixed inset-x-0 bottom-0 z-50 flex h-[80vh] max-h-[100dvh] flex-col rounded-t-xl border border-border-subtle bg-background-secondary shadow-2xl shadow-black/60 md:inset-x-auto md:bottom-5 md:right-5 md:h-[600px] md:max-h-[80vh] md:w-[400px] md:rounded-xl"
+        >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
             <div className="flex items-center gap-2.5">
@@ -193,13 +232,19 @@ export default function AIChatWidget() {
                 {messages.map((m, i) => (
                   <div
                     key={i}
-                    className={`max-w-[85%] whitespace-pre-wrap rounded-lg px-3.5 py-2.5 text-sm leading-relaxed ${
+                    className={`max-w-[85%] rounded-lg px-3.5 py-2.5 text-sm leading-relaxed ${
                       m.role === "user"
-                        ? "ml-auto bg-accent text-white"
+                        ? "ml-auto whitespace-pre-wrap bg-accent text-white"
                         : "bg-surface text-text-primary"
                     }`}
                   >
-                    {m.content || (
+                    {m.content ? (
+                      m.role === "assistant" ? (
+                        <ChatMarkdown text={m.content} />
+                      ) : (
+                        m.content
+                      )
+                    ) : (
                       <span className="inline-flex gap-1" aria-label="Assistant is typing">
                         <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-text-muted" />
                         <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-text-muted [animation-delay:150ms]" />
@@ -229,7 +274,7 @@ export default function AIChatWidget() {
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Ask anything about our vehicles…"
                 aria-label="Chat message"
-                className="flex-1 rounded-md border border-border-subtle bg-surface px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"
+                className="flex-1 rounded-md border border-border-subtle bg-surface px-3 py-2.5 text-base text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none md:text-sm"
               />
               <button
                 type="submit"
