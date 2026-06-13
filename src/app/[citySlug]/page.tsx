@@ -30,7 +30,7 @@ const LOCAL_PAGES: Record<string, LocalPageDef> = {
     metaDescription:
       "Shop honest used cars, trucks, and SUVs in Suffolk, VA at RydeTime Auto, 1913 Holland Road. Fair market pricing, financing options, no-pressure process.",
     intro:
-      "RydeTime Auto is Suffolk's hometown independent dealership — we're located right on Holland Road (Route 58), a few minutes west of downtown Suffolk. Instead of driving across the water to a megastore, you can shop a hand-picked selection of used cars, trucks, and SUVs from a family-operated lot where the people who priced the vehicles are the same people who hand you the keys.",
+      "RydeTime Auto is Suffolk's hometown independent dealership — we're located right on Holland Road (Route 58), a few minutes west of downtown Suffolk. Instead of driving across the water to a megastore, you can shop a hand-picked selection of used cars, trucks, and SUVs from a family-owned and operated lot where the people who priced the vehicles are the same people who hand you the keys.",
     filters: { limit: 6 },
     inventoryQuery: "",
     inventoryLinkLabel: "Browse Our Full Suffolk Inventory",
@@ -55,7 +55,7 @@ const LOCAL_PAGES: Record<string, LocalPageDef> = {
     metaDescription:
       "Virginia Beach drivers: skip the big-lot markup. RydeTime Auto in Suffolk offers honest used cars about 45 minutes away via I-264 and Route 58. Worth the drive.",
     intro:
-      "From most of Virginia Beach, RydeTime Auto is about a 45-minute drive — straight out I-264 West, then Route 58 West into Suffolk. That short trip past the big-city lots is exactly why people make it: a family-operated dealership with fair, market-based pricing and none of the four-square negotiation theater you'll find closer to the Oceanfront.",
+      "From most of Virginia Beach, RydeTime Auto is about a 45-minute drive — straight out I-264 West, then Route 58 West into Suffolk. That short trip past the big-city lots is exactly why people make it: a family-owned and operated dealership with fair, market-based pricing and none of the four-square negotiation theater you'll find closer to the Oceanfront.",
     filters: { limit: 6 },
     inventoryQuery: "",
     inventoryLinkLabel: "See What's Worth the Drive",
@@ -105,7 +105,7 @@ const LOCAL_PAGES: Record<string, LocalPageDef> = {
     metaDescription:
       "Norfolk drivers: RydeTime Auto in Suffolk is about 35 minutes away via I-264 and Route 58. Honest used cars, military-friendly financing, no pressure.",
     intro:
-      "From downtown Norfolk, Ghent, or the Naval Station, RydeTime Auto is roughly a 35-minute drive — I-264 West through Portsmouth, then Route 58 West into Suffolk. Norfolk drivers make the trip for a simple reason: a smaller, family-operated lot with honest pricing beats a high-pressure city dealership row.",
+      "From downtown Norfolk, Ghent, or the Naval Station, RydeTime Auto is roughly a 35-minute drive — I-264 West through Portsmouth, then Route 58 West into Suffolk. Norfolk drivers make the trip for a simple reason: a smaller, family-owned and operated lot with honest pricing beats a high-pressure city dealership row.",
     filters: { limit: 6 },
     inventoryQuery: "",
     inventoryLinkLabel: "Browse Inventory Near Norfolk",
@@ -130,7 +130,7 @@ const LOCAL_PAGES: Record<string, LocalPageDef> = {
     metaDescription:
       "Portsmouth drivers: RydeTime Auto is about 25 minutes west on Route 58 in Suffolk. Honest used cars, fair prices, and financing for all credit situations.",
     intro:
-      "Portsmouth is one of our closest neighbors — from most of the city, RydeTime Auto is about a 25-minute drive west on US-58 into Suffolk. No tunnels, no bridges, just a straight run down Route 58 to a family-operated lot at 1913 Holland Road.",
+      "Portsmouth is one of our closest neighbors — from most of the city, RydeTime Auto is about a 25-minute drive west on US-58 into Suffolk. No tunnels, no bridges, just a straight run down Route 58 to a family-owned and operated lot at 1913 Holland Road.",
     filters: { limit: 6 },
     inventoryQuery: "",
     inventoryLinkLabel: "Browse Inventory Near Portsmouth",
@@ -230,7 +230,7 @@ const LOCAL_PAGES: Record<string, LocalPageDef> = {
     metaDescription:
       "Looking for a dependable used car in Suffolk, VA? RydeTime Auto reviews every vehicle before sale and tells you honestly what we know. Carfax available on many.",
     intro:
-      "Everyone says they sell 'reliable' used cars. Here's what that word actually means at RydeTime Auto: before a vehicle goes up for sale, we review it for drivability, safety, and comfort concerns; we address visible issues like warning lights or A/C problems; vehicles go through Virginia state inspection when applicable; and we tell you what we know — including the things to keep an eye on.",
+      "Everyone says they sell 'reliable' used cars. Here's what that word actually means at RydeTime Auto: before a vehicle goes up for sale, we review it for drivability, safety, and comfort concerns; we address visible issues like warning lights or A/C problems; every vehicle goes through Virginia state inspection; and we tell you what we know — including the things to keep an eye on.",
     filters: { mileageMax: 120000, sort: "mileage_asc", limit: 6 },
     inventoryQuery: "?mileageMax=120000",
     inventoryLinkLabel: "Browse Lower-Mileage Vehicles",

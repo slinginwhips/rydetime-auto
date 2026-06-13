@@ -32,6 +32,7 @@ export default function Header() {
   }, [open]);
 
   return (
+    <>
     <header className="sticky top-0 z-40 border-b-2 border-accent bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         {/* Logo */}
@@ -116,10 +117,14 @@ export default function Header() {
           </button>
         </div>
       </div>
+      </header>
 
-      {/* Mobile drawer — kept mounted so the slide/fade transition can run */}
+      {/* Mobile drawer — kept mounted so the slide/fade transition can run.
+          Rendered OUTSIDE <header> so position:fixed resolves against the
+          viewport, not the backdrop-blurred header (which would otherwise
+          become the containing block and collapse the drawer to 0 height). */}
       <div
-        className={`fixed inset-x-0 bottom-0 top-[66px] z-40 overflow-y-auto bg-background transition-all duration-300 ease-out lg:hidden ${
+        className={`fixed inset-x-0 bottom-0 top-[66px] z-30 overflow-y-auto bg-background transition-all duration-300 ease-out lg:hidden ${
           open
             ? "visible translate-y-0 opacity-100"
             : "invisible -translate-y-3 opacity-0"
@@ -159,7 +164,7 @@ export default function Header() {
           </p>
         </nav>
       </div>
-    </header>
+    </>
   );
 }
 

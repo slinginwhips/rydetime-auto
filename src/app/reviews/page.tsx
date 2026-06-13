@@ -6,7 +6,7 @@ import ReviewsSection from "@/components/ReviewsSection";
 export const metadata = generatePageMetadata({
   title: "Customer Reviews | RydeTime Auto — Suffolk, VA",
   description:
-    "See what customers say about buying a used car at RydeTime Auto in Suffolk, VA. Honest vehicles, no-pressure process, and a family-operated experience.",
+    "See what customers say about buying a used car at RydeTime Auto in Suffolk, VA. Honest vehicles, no-pressure process, and a family-owned and operated experience.",
   path: "/reviews",
 });
 
@@ -20,7 +20,7 @@ const WHY = [
     body: "Browse, test drive, bring your mechanic, think it over. The decision is yours, on your timeline.",
   },
   {
-    title: "Real people, family-operated",
+    title: "Real people, family-owned and operated",
     body: "No sales towers, no manager shuffle. You deal directly with the people who run the lot.",
   },
   {

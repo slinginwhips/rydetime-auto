@@ -39,7 +39,7 @@ const VALUE_PROPS = [
   },
   {
     title: "Hampton Roads Local",
-    text: "Family-operated on Holland Road in Suffolk. We sell to neighbors in Virginia Beach, Chesapeake, Norfolk, and Portsmouth — and we see them around town after.",
+    text: "Family-owned and operated on Holland Road in Suffolk. We sell to neighbors across Virginia Beach, Chesapeake, Norfolk, Portsmouth, and northeastern North Carolina — and we see them around town after.",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
@@ -195,7 +195,7 @@ export default async function HomePage() {
               <p className="text-3xl font-extrabold text-text-primary">
                 <CountUp end={1} />
               </p>
-              <p className="mt-1 text-sm text-text-secondary">family-operated lot on Holland Road</p>
+              <p className="mt-1 text-sm text-text-secondary">family-owned and operated lot on Holland Road</p>
             </div>
           </div>
         </Reveal>
@@ -235,7 +235,7 @@ export default async function HomePage() {
       <section className="border-y border-border-subtle bg-background-secondary">
         <Reveal variant="up" className="mx-auto max-w-7xl px-4 py-10 text-center sm:px-6 lg:px-8">
           <Reveal variant="tracking" as="p" className="text-sm font-semibold uppercase tracking-widest2 text-text-muted">
-            Serving Suffolk, Virginia Beach, Chesapeake, Norfolk, Portsmouth & Hampton Roads
+            Serving Suffolk, Virginia Beach, Chesapeake, Norfolk, Portsmouth, Hampton Roads & Northeastern North Carolina
           </Reveal>
           <div className="mt-4 flex flex-wrap justify-center gap-x-6 gap-y-2">
             {LOCAL_LINKS.map((l) => (

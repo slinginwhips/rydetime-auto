@@ -26,13 +26,14 @@ export const DEALERSHIP = {
     "Norfolk",
     "Portsmouth",
     "Hampton Roads",
+    "Northeastern North Carolina",
   ],
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "https://rydetimeauto.com",
   geo: { latitude: 36.7282, longitude: -76.6105 },
 } as const;
 
 export const HOW_WE_PREPARE_COPY =
-  "At RydeTime Auto, we know people are buying used vehicles, not brand-new ones. Our goal is to be clear, helpful, and realistic about what we sell. Before a vehicle is offered for sale, we review it for obvious drivability, safety, and comfort concerns. When we notice issues such as warning lights, window problems, A/C concerns, radio problems, or other visible problems, we work to address them before sale. Vehicles are sent through Virginia state inspection when applicable. Many vehicles may receive an oil change or additional maintenance depending on recent service history, timing, and vehicle condition. Because every used vehicle is different, we encourage customers to review the Carfax when available, ask questions, inspect the vehicle, take a test drive, and make sure the vehicle feels right for their needs.";
+  "At RydeTime Auto, we know people are buying used vehicles, not brand-new ones. Our goal is to be clear, helpful, and realistic about what we sell. Before a vehicle is offered for sale, we review it for obvious drivability, safety, and comfort concerns. When we notice issues such as warning lights, window problems, A/C concerns, radio problems, or other visible problems, we work to address them before sale. Every vehicle is sent through Virginia state inspection. Many vehicles may receive an oil change or additional maintenance depending on recent service history, timing, and vehicle condition. Because every used vehicle is different, we encourage customers to review the Carfax when available, ask questions, inspect the vehicle, take a test drive, and make sure the vehicle feels right for their needs.";
 
 export const FOOTER_DISCLAIMER =
   "Prices exclude taxes, title, registration, documentation fees, and any other applicable fees. Payment estimates are for informational purposes only. Financing is not guaranteed and is subject to credit approval. Vehicle availability subject to prior sale. Vehicle information believed accurate but not guaranteed — verify all details with dealership prior to purchase.";

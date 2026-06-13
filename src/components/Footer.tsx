@@ -51,9 +51,10 @@ export default function Footer() {
               <Logo variant="dark" className="h-10 w-auto" />
             </Link>
             <p className="mt-4 text-sm leading-relaxed text-text-secondary">
-              Family-operated independent used car dealership in Suffolk, VA.
-              Honest vehicles, AI-powered search, and a no-pressure process —
-              serving all of Hampton Roads.
+              Family-owned and operated independent used car dealership in
+              Suffolk, VA. Honest vehicles, AI-powered search, and a no-pressure
+              process — serving all of Hampton Roads and northeastern North
+              Carolina.
             </p>
           </div>
 

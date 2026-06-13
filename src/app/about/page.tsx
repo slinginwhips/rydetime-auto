@@ -4,9 +4,9 @@ import { DEALERSHIP, HOW_WE_PREPARE_COPY } from "@/lib/dealership";
 import ReviewsSection from "@/components/ReviewsSection";
 
 export const metadata = generatePageMetadata({
-  title: "About RydeTime Auto | Family-Operated Used Car Dealer — Suffolk, VA",
+  title: "About RydeTime Auto | Family-Owned & Operated Used Car Dealer — Suffolk, VA",
   description:
-    "RydeTime Auto is a family-operated independent used car dealership at 1913 Holland Road, Suffolk, VA. Honest cars, no-pressure process, serving all of Hampton Roads.",
+    "RydeTime Auto is a family-owned and operated independent used car dealership at 1913 Holland Road, Suffolk, VA. Honest cars, no-pressure process, serving Hampton Roads and northeastern North Carolina.",
   path: "/about",
 });
 
@@ -43,7 +43,7 @@ export default function AboutPage() {
           </h1>
           <div className="mt-6 max-w-3xl space-y-4 text-base leading-relaxed text-text-secondary">
             <p>
-              RydeTime Auto is a family-operated independent dealership at 1913
+              RydeTime Auto is a family-owned and operated independent dealership at 1913
               Holland Road in Suffolk, Virginia. We&apos;re not a chain,
               we&apos;re not a franchise, and we don&apos;t have a tower of
               managers to &quot;go check with.&quot; When you deal with us, you
@@ -60,9 +60,9 @@ export default function AboutPage() {
             </p>
             <p>
               We serve Suffolk, Virginia Beach, Chesapeake, Norfolk,
-              Portsmouth, and the greater Hampton Roads area — and a lot of our
-              business comes from repeat customers and their families, which is
-              exactly how we want it.
+              Portsmouth, the greater Hampton Roads area, and northeastern North
+              Carolina — and a lot of our business comes from repeat customers
+              and their families, which is exactly how we want it.
             </p>
           </div>
         </div>
