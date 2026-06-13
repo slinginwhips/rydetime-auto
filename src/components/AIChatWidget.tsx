@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import Image from "next/image";
 import { CHAT_MODES, type ChatRole, type ChatRequest } from "@/types/chat";
 import { AI_DISCLAIMER, DEALERSHIP } from "@/lib/dealership";
 import ChatMarkdown from "@/components/ChatMarkdown";
@@ -28,6 +29,7 @@ export default function AIChatWidget() {
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
+  const [showTip, setShowTip] = useState(false);
   // Mobile keyboard handling: when the on-screen keyboard opens, the visual
   // viewport shrinks but layout vh does not, hiding the input/send button.
   // We track the keyboard height and lift the panel above it.
@@ -53,6 +55,25 @@ export default function AIChatWidget() {
 
   useEffect(() => {
     if (open) inputRef.current?.focus();
+  }, [open]);
+
+  // Inviting intro bubble above the chat button — shows once per session,
+  // a moment after load, then fades out after ~4 seconds.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (sessionStorage.getItem("rydetime_chat_tip")) return;
+    sessionStorage.setItem("rydetime_chat_tip", "1");
+    const showT = setTimeout(() => setShowTip(true), 1200);
+    const hideT = setTimeout(() => setShowTip(false), 5200);
+    return () => {
+      clearTimeout(showT);
+      clearTimeout(hideT);
+    };
+  }, []);
+
+  // Never let the tip linger once the panel is open.
+  useEffect(() => {
+    if (open) setShowTip(false);
   }, [open]);
 
   // Track the on-screen keyboard via the VisualViewport API (mobile only).
@@ -148,24 +169,33 @@ export default function AIChatWidget() {
 
   return (
     <>
-      {/* Floating button */}
+      {/* Floating button + intro bubble */}
       {!open && (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          aria-label="Open AI assistant chat"
-          className="fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-white shadow-lg shadow-black/50 transition-all hover:scale-105 hover:bg-accent-hover max-md:bottom-20"
-        >
-          {/* Wheel icon */}
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="9.5" />
-            <circle cx="12" cy="12" r="3" />
-            <line x1="12" y1="2.5" x2="12" y2="9" />
-            <line x1="12" y1="15" x2="12" y2="21.5" />
-            <line x1="2.5" y1="12" x2="9" y2="12" />
-            <line x1="15" y1="12" x2="21.5" y2="12" />
-          </svg>
-        </button>
+        <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-3 max-md:bottom-20">
+          {/* Intro tooltip — fades in once per session, then fades out */}
+          <div
+            aria-hidden="true"
+            className={`pointer-events-none flex items-center rounded-full border border-border-subtle bg-background-card px-4 py-2 text-sm font-medium text-text-primary shadow-lg shadow-black/40 transition-all duration-500 ${
+              showTip ? "translate-y-0 opacity-100" : "translate-y-1 opacity-0"
+            }`}
+          >
+            👋 Questions? Ask our AI assistant!
+          </div>
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            aria-label="Open AI assistant chat"
+            className="btn-glow flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-background-card shadow-lg shadow-black/50 ring-1 ring-border-subtle transition-all"
+          >
+            <Image
+              src="/chat-wheel.png"
+              alt=""
+              width={56}
+              height={56}
+              className="h-12 w-12 object-contain"
+            />
+          </button>
+        </div>
       )}
 
       {/* Panel: bottom sheet (mobile) / side panel (desktop) */}
