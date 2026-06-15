@@ -29,10 +29,15 @@ yarn-error.log*
 # local design assets (brand sheets live in /public once processed)
 /NewestLogo.png
 /55fb16a7-e9fb-44ae-8f0b-971f56603ccf.png
-# scratch wheel sources / scratch composites (final asset is /public/wheel-button.png)
+# scratch wheel sources / scratch composites (final asset is /public/wheel.png)
 /wheel_transparent_extracted.png
 /updatedwheel.png
+/trythisone.png
 /compare.png
+/magenta-big.png
+/green-big.png
+/wheel-proof.png
+/wheel-v2-proof.png
 
 # typescript
 *.tsbuildinfo
