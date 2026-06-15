@@ -308,6 +308,12 @@ export default async function VehicleDetailPage({ params }: VDPProps) {
                   vin: vehicle.vin,
                   carfaxUrl: getCarfaxProvider().getReportUrl(vehicle.vin, vehicle.carfax_url),
                   status: vehicle.status,
+                  carfaxBadges: {
+                    oneOwner: vehicle.carfax_badge_one_owner,
+                    accidentFree: vehicle.carfax_badge_accident_free,
+                    serviceRecords: vehicle.carfax_badge_service_records,
+                    greatValue: vehicle.carfax_badge_great_value,
+                  },
                 }}
               />
             </div>

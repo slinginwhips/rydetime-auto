@@ -5,6 +5,7 @@ import Link from "next/link";
 import AppointmentRequestForm from "@/components/AppointmentRequestForm";
 import HoldVehicleFlow from "@/components/HoldVehicleFlow";
 import CarfaxButton from "@/components/CarfaxButton";
+import CarfaxBadges from "@/components/CarfaxBadges";
 import ShareBar from "@/components/ShareBar";
 import { openChatForVehicle } from "@/components/VehicleCard";
 import { DEALERSHIP } from "@/lib/dealership";
@@ -17,6 +18,12 @@ interface VDPActionsProps {
     vin: string;
     carfaxUrl: string;
     status: string;
+    carfaxBadges: {
+      oneOwner: boolean;
+      accidentFree: boolean;
+      serviceRecords: boolean;
+      greatValue: boolean;
+    };
   };
 }
 
@@ -78,7 +85,15 @@ export default function VDPActions({ vehicle }: VDPActionsProps) {
         </a>
       </div>
 
-      <div className="pt-1">
+      <div className="space-y-2.5 pt-1">
+        <CarfaxBadges
+          oneOwner={vehicle.carfaxBadges.oneOwner}
+          accidentFree={vehicle.carfaxBadges.accidentFree}
+          serviceRecords={vehicle.carfaxBadges.serviceRecords}
+          greatValue={vehicle.carfaxBadges.greatValue}
+          href={vehicle.carfaxUrl}
+          className="justify-center"
+        />
         <CarfaxButton vin={vehicle.vin} href={vehicle.carfaxUrl} />
       </div>
 
