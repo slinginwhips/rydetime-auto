@@ -188,7 +188,7 @@ export default function AIChatWidget() {
             className="flex items-center justify-center transition-transform hover:scale-105"
           >
             <Image
-              src="/wheel-button.png"
+              src="/chrome-wheel.png"
               alt=""
               width={72}
               height={72}
