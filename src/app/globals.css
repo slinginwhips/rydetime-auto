@@ -142,6 +142,20 @@ summary {
   animation: glowPulse 1.6s ease-in-out infinite;
 }
 
+/* --- Chat wheel: continuous slow spin --- */
+@keyframes chatWheelSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.chat-wheel-spin {
+  animation: chatWheelSpin 5s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .chat-wheel-spin {
+    animation: none;
+  }
+}
+
 /* --- Secondary CTA: border draws itself on hover --- */
 .btn-draw {
   position: relative;

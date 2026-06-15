@@ -185,14 +185,14 @@ export default function AIChatWidget() {
             type="button"
             onClick={() => setOpen(true)}
             aria-label="Open AI assistant chat"
-            className="btn-glow flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-background-card shadow-lg shadow-black/50 ring-1 ring-border-subtle transition-all"
+            className="flex items-center justify-center transition-transform hover:scale-105"
           >
             <Image
-              src="/chat-wheel.png"
+              src="/wheel-button.png"
               alt=""
-              width={56}
-              height={56}
-              className="h-12 w-12 object-contain"
+              width={72}
+              height={72}
+              className="chat-wheel-spin h-[68px] w-[68px] object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]"
             />
           </button>
         </div>
