@@ -11,6 +11,7 @@ import StickySentinel from "@/components/StickySentinel";
 import Reveal from "@/components/Reveal";
 import VDPActions from "@/components/VDPActions";
 import { getVehicleBySlug, getSimilarVehicles } from "@/lib/vehicles";
+import { getCarfaxProvider } from "@/lib/carfaxProvider";
 import { estimateMonthlyPayment } from "@/types/vehicle";
 import {
   generateVehicleMetadata,
@@ -305,7 +306,7 @@ export default async function VehicleDetailPage({ params }: VDPProps) {
                   label: title,
                   price: vehicle.price,
                   vin: vehicle.vin,
-                  carfax_url: vehicle.carfax_url,
+                  carfaxUrl: getCarfaxProvider().getReportUrl(vehicle.vin, vehicle.carfax_url),
                   status: vehicle.status,
                 }}
               />

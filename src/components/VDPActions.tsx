@@ -15,7 +15,7 @@ interface VDPActionsProps {
     label: string;
     price: number;
     vin: string;
-    carfax_url: string | null;
+    carfaxUrl: string;
     status: string;
   };
 }
@@ -79,7 +79,7 @@ export default function VDPActions({ vehicle }: VDPActionsProps) {
       </div>
 
       <div className="pt-1">
-        <CarfaxButton vin={vehicle.vin} carfaxUrl={vehicle.carfax_url} />
+        <CarfaxButton vin={vehicle.vin} href={vehicle.carfaxUrl} />
       </div>
 
       <div className="flex justify-center pt-2">
