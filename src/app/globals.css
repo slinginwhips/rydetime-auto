@@ -156,6 +156,40 @@ summary {
   }
 }
 
+/* --- Chat intro bubble: spring pop in, soft fade out --- */
+@keyframes chatBubbleIn {
+  0% { opacity: 0; transform: translateY(10px) scale(0.85); }
+  60% { opacity: 1; transform: translateY(-2px) scale(1.02); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes chatBubbleOut {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(6px) scale(0.92); }
+}
+.chat-bubble-in {
+  animation: chatBubbleIn 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.chat-bubble-out {
+  animation: chatBubbleOut 0.32s ease-in both;
+}
+
+/* --- Chat notification badge: springy pop --- */
+@keyframes chatBadgePop {
+  0% { opacity: 0; transform: scale(0); }
+  70% { opacity: 1; transform: scale(1.18); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.chat-badge-pop {
+  animation: chatBadgePop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .chat-bubble-in,
+  .chat-bubble-out,
+  .chat-badge-pop {
+    animation: none;
+  }
+}
+
 /* --- Secondary CTA: border draws itself on hover --- */
 .btn-draw {
   position: relative;

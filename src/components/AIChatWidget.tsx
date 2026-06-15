@@ -29,13 +29,16 @@ export default function AIChatWidget() {
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
-  const [showTip, setShowTip] = useState(false);
+  const [showTip, setShowTip] = useState(false); // bubble visible (drives in/out animation)
+  const [tipMounted, setTipMounted] = useState(false); // bubble in the DOM (kept during exit anim)
+  const [showBadge, setShowBadge] = useState(false); // red "1" reminder until chat is opened
   // Mobile keyboard handling: when the on-screen keyboard opens, the visual
   // viewport shrinks but layout vh does not, hiding the input/send button.
   // We track the keyboard height and lift the panel above it.
   const [kbInset, setKbInset] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const introRan = useRef(false); // guards intro against StrictMode double-invoke
 
   // Open via window event (Ask AI buttons site-wide)
   useEffect(() => {
@@ -57,23 +60,36 @@ export default function AIChatWidget() {
     if (open) inputRef.current?.focus();
   }, [open]);
 
-  // Inviting intro bubble above the chat button — shows once per session,
-  // a moment after load, then fades out after ~4 seconds.
+  // Inviting intro bubble + red "1" badge over the chat button.
+  // Bubble: pops up once per session a moment after load, auto-dismisses.
+  // Badge: a non-invasive reminder that persists (across page views) until the
+  // visitor opens the chat for the first time this session.
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (sessionStorage.getItem("rydetime_chat_tip")) return;
+    if (typeof window === "undefined" || introRan.current) return;
+    introRan.current = true;
+    if (sessionStorage.getItem("rydetime_chat_opened")) return; // already engaged
+    setShowBadge(true);
+
+    if (sessionStorage.getItem("rydetime_chat_tip")) return; // bubble already shown
     sessionStorage.setItem("rydetime_chat_tip", "1");
-    const showT = setTimeout(() => setShowTip(true), 1200);
-    const hideT = setTimeout(() => setShowTip(false), 5200);
-    return () => {
-      clearTimeout(showT);
-      clearTimeout(hideT);
-    };
+    // Timers intentionally uncleaned: this widget lives for the page lifetime,
+    // and a cleanup would let StrictMode's double-invoke cancel the one-shot.
+    setTimeout(() => {
+      setTipMounted(true);
+      setShowTip(true);
+    }, 1200);
+    setTimeout(() => setShowTip(false), 7200); // begin exit
+    setTimeout(() => setTipMounted(false), 7560); // remove after exit anim
   }, []);
 
-  // Never let the tip linger once the panel is open.
+  // Opening the chat clears the bubble + badge for the rest of the session.
   useEffect(() => {
-    if (open) setShowTip(false);
+    if (!open) return;
+    setShowTip(false);
+    setShowBadge(false);
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("rydetime_chat_opened", "1");
+    }
   }, [open]);
 
   // Track the on-screen keyboard via the VisualViewport API (mobile only).
@@ -172,20 +188,40 @@ export default function AIChatWidget() {
       {/* Floating button + intro bubble */}
       {!open && (
         <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-3 max-md:bottom-20">
-          {/* Intro tooltip — fades in once per session, then fades out */}
-          <div
-            aria-hidden="true"
-            className={`pointer-events-none flex items-center rounded-full border border-border-subtle bg-background-card px-4 py-2 text-sm font-medium text-text-primary shadow-lg shadow-black/40 transition-all duration-500 ${
-              showTip ? "translate-y-0 opacity-100" : "translate-y-1 opacity-0"
-            }`}
-          >
-            👋 Questions? Ask our AI assistant!
-          </div>
+          {/* Intro speech bubble — springs in once per session, auto-dismisses */}
+          {tipMounted && (
+            <div
+              aria-hidden="true"
+              className={`pointer-events-none relative max-w-[16rem] rounded-2xl rounded-br-md border border-border-subtle bg-background-card px-3.5 py-2.5 shadow-xl shadow-black/40 ${
+                showTip ? "chat-bubble-in" : "chat-bubble-out"
+              }`}
+            >
+              <div className="flex items-start gap-2.5">
+                <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-white">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9.5" />
+                    <circle cx="12" cy="12" r="3" />
+                    <line x1="12" y1="2.5" x2="12" y2="9" />
+                    <line x1="12" y1="15" x2="12" y2="21.5" />
+                    <line x1="2.5" y1="12" x2="9" y2="12" />
+                    <line x1="15" y1="12" x2="21.5" y2="12" />
+                  </svg>
+                </span>
+                <p className="text-[13px] leading-snug text-text-primary">
+                  <span className="font-semibold">Hi, I&apos;m RydeTime AI 👋</span>
+                  <br />
+                  Ask me about financing, trade-ins, or any vehicle on the lot.
+                </p>
+              </div>
+              {/* tail pointing down toward the button */}
+              <span className="absolute -bottom-1.5 right-5 h-3 w-3 rotate-45 border-b border-r border-border-subtle bg-background-card" />
+            </div>
+          )}
           <button
             type="button"
             onClick={() => setOpen(true)}
             aria-label="Open AI assistant chat"
-            className="flex items-center justify-center transition-transform hover:scale-105"
+            className="relative flex items-center justify-center transition-transform hover:scale-105"
           >
             <Image
               src="/wheel.png"
@@ -194,6 +230,12 @@ export default function AIChatWidget() {
               height={72}
               className="chat-wheel-spin h-[68px] w-[68px] object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)]"
             />
+            {/* iPhone-style unread badge — persists until the chat is opened */}
+            {showBadge && (
+              <span className="chat-badge-pop absolute right-0 top-0 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-accent px-1 text-[11px] font-bold leading-none text-white ring-2 ring-background shadow-md shadow-black/40">
+                1
+              </span>
+            )}
           </button>
         </div>
       )}
