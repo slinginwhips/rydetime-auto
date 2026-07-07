@@ -3,6 +3,11 @@ import { z } from "zod";
 import { getAnthropic, AI_MODEL, isAIConfigured } from "@/lib/ai";
 import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import { getAllActiveVehicles, getVehicleById } from "@/lib/vehicles";
+import {
+  formatVehicleKnowledge,
+  matchVehiclesToQuery,
+  retrieveKnowledge,
+} from "@/lib/chatRetrieval";
 import { getLeadProvider } from "@/lib/leadProvider";
 import { sendNotification } from "@/lib/notificationProvider";
 import { DEALERSHIP } from "@/lib/dealership";
@@ -99,40 +104,60 @@ function formatVehicleLine(v: Vehicle): string {
   return `- ${v.year} ${v.make} ${v.model}${v.trim ? ` ${v.trim}` : ""} — $${Number(v.price).toLocaleString()}, ${Number(v.mileage).toLocaleString()} mi, /inventory/${v.slug}`;
 }
 
-function formatVehicleDetail(v: Vehicle): string {
-  const badges: string[] = [];
-  if (v.carfax_badge_one_owner) badges.push("Carfax one-owner");
-  if (v.carfax_badge_accident_free) badges.push("Carfax accident-free");
-  if (v.carfax_badge_service_records) badges.push("Carfax service records");
-  if (v.carfax_badge_great_value) badges.push("Carfax great value");
-  return [
-    `VEHICLE THE CUSTOMER IS CURRENTLY VIEWING:`,
-    `${v.year} ${v.make} ${v.model}${v.trim ? ` ${v.trim}` : ""}`,
-    `Price: $${Number(v.price).toLocaleString()} | Mileage: ${Number(v.mileage).toLocaleString()} mi | Stock #: ${v.stock_number} | VIN: ${v.vin}`,
-    `Body: ${v.body_style ?? "n/a"} | Exterior: ${v.exterior_color ?? "n/a"} | Interior: ${v.interior_color ?? "n/a"}`,
-    `Transmission: ${v.transmission ?? "n/a"} | Drivetrain: ${v.drivetrain ?? "n/a"} | Fuel: ${v.fuel_type ?? "n/a"} | Engine: ${v.engine ?? "n/a"}`,
-    `Status: ${v.status} | Days in inventory: ${v.days_in_inventory}`,
-    badges.length > 0
-      ? `Confirmed history badges: ${badges.join(", ")}`
-      : `Confirmed history badges: none — do NOT claim one-owner, accident-free, or clean title for this vehicle.`,
-    v.carfax_url ? `Carfax report available: ${v.carfax_url}` : `Carfax link: ask the dealership.`,
-    `Page: /inventory/${v.slug}`,
-  ].join("\n");
-}
+/** Full lot as one-liners, capped for prompt safety. */
+const INVENTORY_LINE_CAP = 75;
+/** How many conversation-matched vehicles get the full detail treatment. */
+const MATCHED_DETAIL_CAP = 3;
 
-async function buildContext(vehicleId: string | undefined): Promise<string> {
+/**
+ * Retrieval-augmented context: the whole lot as one-liners, full detail for
+ * the vehicle being viewed AND any vehicles the conversation mentions, plus
+ * dealership knowledge (FAQ/financing/prep/policies) relevant to the
+ * shopper's recent messages.
+ */
+async function buildContext(
+  vehicleId: string | undefined,
+  recentUserText: string
+): Promise<string> {
   const [inventory, vehicle] = await Promise.all([
     getAllActiveVehicles(),
     vehicleId ? getVehicleById(vehicleId) : Promise.resolve(null),
   ]);
-  const top20 = inventory.slice(0, 20);
+  const lines = inventory.slice(0, INVENTORY_LINE_CAP);
   const hours = DEALERSHIP.hours.map((h) => `${h.days}: ${h.hours}`).join(" | ");
   const parts = [
     `DEALERSHIP INFO: ${DEALERSHIP.name}, ${DEALERSHIP.address.full}. Phone: ${DEALERSHIP.phone}. Hours: ${hours}.`,
-    `CURRENT INVENTORY (top ${top20.length} active vehicles — only discuss vehicles on this list or the one being viewed):`,
-    top20.length > 0 ? top20.map(formatVehicleLine).join("\n") : "(inventory list temporarily unavailable — direct customers to /inventory or to call)",
+    `CURRENT INVENTORY (${lines.length} active vehicles — only discuss vehicles on this list or the one being viewed):`,
+    lines.length > 0 ? lines.map(formatVehicleLine).join("\n") : "(inventory list temporarily unavailable — direct customers to /inventory or to call)",
   ];
-  if (vehicle) parts.push(formatVehicleDetail(vehicle));
+
+  if (vehicle) {
+    parts.push(
+      `VEHICLE THE CUSTOMER IS CURRENTLY VIEWING:\n${formatVehicleKnowledge(vehicle)}`
+    );
+  }
+
+  // Vehicles the conversation mentions get full detail too (skip the one
+  // already shown above).
+  const matched = matchVehiclesToQuery(recentUserText, inventory, MATCHED_DETAIL_CAP)
+    .filter((m) => m.id !== vehicle?.id);
+  if (matched.length > 0) {
+    parts.push(
+      `VEHICLES THE CONVERSATION MENTIONS (full confirmed detail):\n\n${matched
+        .map(formatVehicleKnowledge)
+        .join("\n\n")}`
+    );
+  }
+
+  const knowledge = retrieveKnowledge(recentUserText);
+  if (knowledge.length > 0) {
+    parts.push(
+      `DEALERSHIP KNOWLEDGE relevant to this conversation (answer from this — never invent policy):\n\n${knowledge
+        .map((k) => `## ${k.topic}\n${k.text}`)
+        .join("\n\n")}`
+    );
+  }
+
   return parts.join("\n\n");
 }
 
@@ -325,8 +350,15 @@ export async function POST(req: NextRequest): Promise<Response> {
       }
     }
 
+    // Retrieval query: the last few user messages (most recent matters most).
+    const recentUserText = messages
+      .filter((m) => m.role === "user")
+      .slice(-3)
+      .map((m) => m.content)
+      .join("\n");
+
     const [context, vehicle] = await Promise.all([
-      buildContext(vehicle_id),
+      buildContext(vehicle_id, recentUserText),
       vehicle_id ? getVehicleById(vehicle_id) : Promise.resolve(null),
     ]);
 
