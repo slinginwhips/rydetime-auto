@@ -13,9 +13,9 @@ const CARFAX_IMG = "https://www.carfaxonline.com/assets/subscriber/showmethecarf
 const CARFAX_IMG_FALLBACK = "/showmethecarfax.jpg";
 
 /**
- * Official "SHOW ME THE CARFAX" button — compact, centered. The official wordmark
- * is dark-on-white, so it sits on a small white pill (sized to the logo, not a
- * full-width bar) that reads as a deliberate button on the dark page.
+ * Official "SHOW ME THE CARFAX" button. The official artwork is a white-background
+ * JPG, so the graphic itself IS the button face — no padding or pill behind it,
+ * just rounded corners and a shadow so its white bg reads as a clean button edge.
  */
 export default function CarfaxButton({ vin, href }: CarfaxButtonProps) {
   return (
@@ -24,7 +24,7 @@ export default function CarfaxButton({ vin, href }: CarfaxButtonProps) {
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center justify-center rounded-lg bg-white px-5 py-2 shadow-md shadow-black/30 ring-1 ring-black/5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/40"
+        className="inline-block overflow-hidden rounded-lg shadow-md shadow-black/30 ring-1 ring-black/10 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/40"
         aria-label={`Show me the Carfax vehicle history report for VIN ${vin} (opens in a new tab)`}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -37,7 +37,7 @@ export default function CarfaxButton({ vin, href }: CarfaxButtonProps) {
           alt="Show me the Carfax"
           width={156}
           height={56}
-          className="h-9 w-auto"
+          className="block h-12 w-auto"
         />
       </a>
     </div>

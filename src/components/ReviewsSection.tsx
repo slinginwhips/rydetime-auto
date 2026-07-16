@@ -10,8 +10,8 @@ interface ReviewsSectionProps {
  * without changing markup.
  */
 const GOOGLE_RATING = {
-  rating: 4.8,
-  reviewCount: 47,
+  rating: 4.9,
+  reviewCount: 190,
 };
 
 const TESTIMONIALS = [

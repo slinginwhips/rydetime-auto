@@ -11,6 +11,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
+/** Branded placeholder appended to vehicles with fewer than 10 feed photos. */
+const PLACEHOLDER_PHOTO_URL = "/images/fresh-arrival.jpg";
+
 interface ExistingVehicleRow {
   id: string;
   vin: string;
@@ -183,11 +186,15 @@ async function runSync(req: NextRequest): Promise<NextResponse> {
           if (ovErr) summary.errors.push(`${dc.vin}: failed to re-apply overrides — ${ovErr.message}`);
         }
 
-        // Replace photos.
+        // Replace photos. Vehicles with fewer than 10 real photos get the branded
+        // "Fresh Arrival — more photos after detail" card appended as the last
+        // slide (it becomes the primary/only image for vehicles with none).
+        const photoUrls =
+          dc.photo_urls.length < 10 ? [...dc.photo_urls, PLACEHOLDER_PHOTO_URL] : dc.photo_urls;
         await supabase.from("vehicle_photos").delete().eq("vehicle_id", vehicleId);
-        if (dc.photo_urls.length > 0) {
+        if (photoUrls.length > 0) {
           const { error: photoErr } = await supabase.from("vehicle_photos").insert(
-            dc.photo_urls.map((url, i) => ({
+            photoUrls.map((url, i) => ({
               vehicle_id: vehicleId,
               url,
               sort_order: i,
