@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { generatePageMetadata } from "@/lib/seo";
 import { DEALERSHIP, HOW_WE_PREPARE_COPY } from "@/lib/dealership";
 import ReviewsSection from "@/components/ReviewsSection";
@@ -72,17 +73,13 @@ export default function AboutPage() {
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <div className="grid items-center gap-8 md:grid-cols-3">
           <div className="md:col-span-1">
-            {/* Photo placeholder */}
-            <div className="flex aspect-[4/5] items-center justify-center rounded-lg border border-border-subtle bg-background-card">
-              <div className="text-center">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-surface text-2xl">
-                  📷
-                </div>
-                <p className="mt-3 text-xs uppercase tracking-widest text-text-muted">
-                  Photo of Ryan coming soon
-                </p>
-              </div>
-            </div>
+            <Image
+              src="/images/ryan.jpg"
+              alt="Ryan, owner of RydeTime Auto, at work in the dealership office"
+              width={900}
+              height={900}
+              className="aspect-square w-full rounded-lg border border-border-subtle object-cover"
+            />
           </div>
           <div className="md:col-span-2">
             <h2 className="text-2xl font-bold text-text-primary md:text-3xl">
@@ -119,17 +116,13 @@ export default function AboutPage() {
       <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-6">
         <div className="grid items-center gap-8 md:grid-cols-3">
           <div className="md:order-2 md:col-span-1">
-            {/* Photo placeholder */}
-            <div className="flex aspect-[4/5] items-center justify-center rounded-lg border border-border-subtle bg-background-card">
-              <div className="text-center">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-surface text-2xl">
-                  📷
-                </div>
-                <p className="mt-3 text-xs uppercase tracking-widest text-text-muted">
-                  Photo of Dawn coming soon
-                </p>
-              </div>
-            </div>
+            <Image
+              src="/images/dawn.jpg"
+              alt="Dawn, co-owner of RydeTime Auto"
+              width={900}
+              height={900}
+              className="aspect-square w-full rounded-lg border border-border-subtle object-cover"
+            />
           </div>
           <div className="md:order-1 md:col-span-2">
             <h2 className="text-2xl font-bold text-text-primary md:text-3xl">

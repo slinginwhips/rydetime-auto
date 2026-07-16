@@ -14,24 +14,31 @@ const GOOGLE_RATING = {
   reviewCount: 190,
 };
 
+// Real Google reviews (lightly trimmed for length; typos cleaned).
 const TESTIMONIALS = [
   {
-    name: "Marcus T.",
-    location: "Chesapeake, VA",
+    name: "Quindol",
+    location: "Google review",
     rating: 5,
-    text: "Bought a Camry for my daughter heading to ODU. Ryan walked us through the Carfax, pointed out a door ding before I even noticed it, and didn't push a single add-on. That's how you earn repeat business.",
+    text: "This dealership hands down has had the best customer service I've ever experienced. The owner Ryan was extremely knowledgeable and helpful when it came to satisfying any concerns I had about the car, and very transparent. Nowadays a lot of dealerships are trying to get over on people, so it's refreshing to see people who actually care about their customers. 10/10 would recommend shopping here.",
   },
   {
-    name: "Danielle W.",
-    location: "Suffolk, VA",
+    name: "Kimberly Saunders",
+    location: "Google review",
     rating: 5,
-    text: "First time financing a car on my own and I was nervous about getting taken advantage of. They explained every number on the paperwork and the payment came in under what we discussed. Zero pressure the whole time.",
+    text: "The RydeTime Auto team are awesome. They provided great customer service and a friendly environment. The finance team explained everything step-by-step in plain words. I really appreciated that they made my car buying experience positive and memorable. I would definitely come back for a repeat purchase. Thank you, Dawn and the RydeTime Auto team.",
   },
   {
-    name: "James R.",
-    location: "Virginia Beach, VA",
-    rating: 4,
-    text: "Drove out from the oceanfront for a truck I saw online. It was exactly as described — they even told me up front it would need tires in another 10k miles. Honest answer, fair price, easy deal.",
+    name: "Jazzy Piercey",
+    location: "Google review",
+    rating: 5,
+    text: "This was an AMAZING experience! Genuine and upfront people. I have never had a better car buying experience in my life. They work with you and are just so nice. 10/10 recommend — and when I need to purchase a car for my daughter when she starts driving, I will go to them!",
+  },
+  {
+    name: "Jo Maume",
+    location: "Google review",
+    rating: 5,
+    text: "Ryan and Dawn are a down to earth mom and son team. I highly recommend a used car purchase from them. Ryan takes his time to answer questions and was sincere with his responses. Even though the inventory is small, it is cherry picked from his sources. Best hassle-free car purchase I have ever experienced.",
   },
 ];
 
@@ -78,7 +85,7 @@ export default function ReviewsSection({ teaser = false }: ReviewsSectionProps) 
       </div>
 
       {/* Testimonial cards */}
-      <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-3">
+      <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-2">
         {TESTIMONIALS.map((t) => (
           <figure
             key={t.name}

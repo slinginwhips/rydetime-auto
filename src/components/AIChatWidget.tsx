@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { CHAT_MODES, type ChatRole, type ChatRequest } from "@/types/chat";
 import { AI_DISCLAIMER, DEALERSHIP } from "@/lib/dealership";
@@ -24,6 +25,11 @@ function getSessionToken(): string {
 }
 
 export default function AIChatWidget() {
+  const pathname = usePathname();
+  // Vehicle detail pages have the sticky bottom CTA bar on mobile; the floating
+  // button must clear it there. Everywhere else it hugs the corner, padded by
+  // the iPhone home-indicator safe area so Safari's bottom bar never covers it.
+  const onVdp = /^\/inventory\/[^/]+/.test(pathname ?? "");
   const [open, setOpen] = useState(false);
   const [vehicleId, setVehicleId] = useState<string | undefined>(undefined);
   const [messages, setMessages] = useState<UiMessage[]>([]);
@@ -187,7 +193,13 @@ export default function AIChatWidget() {
     <>
       {/* Floating button + intro bubble */}
       {!open && (
-        <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-3 max-md:bottom-20">
+        <div
+          className={`fixed bottom-5 right-5 z-40 flex flex-col items-end gap-3 ${
+            onVdp
+              ? "max-md:bottom-20"
+              : "max-md:bottom-[calc(1rem+env(safe-area-inset-bottom))]"
+          }`}
+        >
           {/* Intro speech bubble — springs in once per session, auto-dismisses */}
           {tipMounted && (
             <div
