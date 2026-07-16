@@ -1,3 +1,5 @@
+import { Writable } from "stream";
+import { Client as FtpClient } from "basic-ftp";
 import type { DCVehicle, DCFeedResponse } from "@/types/dealercenter";
 
 /**
@@ -143,15 +145,17 @@ export function parseCsvFeed(csv: string): DCVehicle[] {
       exterior_color: col(row, "exteriorcolor", "color") || undefined,
       interior_color: col(row, "interiorcolor") || undefined,
       mileage: num(col(row, "mileage", "miles", "odometer")),
-      price: num(col(row, "price", "sellingprice", "internetprice")),
+      price: num(col(row, "price", "specialprice", "sellingprice", "internetprice")),
       msrp: num(col(row, "msrp")) || undefined,
       transmission: col(row, "transmission") || undefined,
       drivetrain: col(row, "drivetrain", "drivetype") || undefined,
       fuel_type: col(row, "fueltype", "fuel") || undefined,
       engine: col(row, "engine") || undefined,
       doors: num(col(row, "doors")) || undefined,
-      description: col(row, "description", "comments") || undefined,
-      photo_urls: photosRaw.split(/[|;]/).map((u) => u.trim()).filter((u) => /^https?:\/\//i.test(u)),
+      description: col(row, "description", "webaddescription", "comments") || undefined,
+      // DealerCenter delimits PhotoURLs with commas inside the quoted field;
+      // splitting on comma is safe because each part must still look like a URL.
+      photo_urls: photosRaw.split(/[|;,]/).map((u) => u.trim()).filter((u) => /^https?:\/\//i.test(u)),
       features: col(row, "options", "features", "equipment").split(/[,|;]/).map((f) => f.trim()).filter(Boolean),
       carfax_url: col(row, "carfaxurl") || undefined,
       carfax_one_owner: yes(col(row, "carfaxoneowner", "oneowner")),
@@ -167,12 +171,80 @@ export function parseCsvFeed(csv: string): DCVehicle[] {
   return vehicles;
 }
 
+/* ---------------- DealerCenter FTP drop-box fetch ---------------- */
+
+const FTP_FEED_FILE = /^DealerCenter_(\d{8})_\d+\.csv$/i;
+
+function isFtpConfigured(): boolean {
+  return Boolean(
+    process.env.DEALERCENTER_FTP_HOST &&
+    process.env.DEALERCENTER_FTP_USER &&
+    process.env.DEALERCENTER_FTP_PASSWORD
+  );
+}
+
+/**
+ * Download the newest dated DealerCenter CSV from the FTP drop box.
+ * DealerCenter's firewall can't do FTPS passive, so this is plain FTP by
+ * design (scoped drop-box account, semi-public inventory data).
+ * Files are dated (DealerCenter_YYYYMMDD_<dcid>.csv), one per day — pick
+ * the latest by the date in the filename, not by a fixed name.
+ */
+async function fetchCsvViaFtp(): Promise<string> {
+  const client = new FtpClient(30_000);
+  try {
+    await client.access({
+      host: process.env.DEALERCENTER_FTP_HOST!,
+      user: process.env.DEALERCENTER_FTP_USER!,
+      password: process.env.DEALERCENTER_FTP_PASSWORD!,
+      port: Number(process.env.DEALERCENTER_FTP_PORT || 21),
+      secure: false,
+    });
+    const dir = process.env.DEALERCENTER_FTP_DIR;
+    if (dir) await client.cd(dir);
+
+    const listing = await client.list();
+    const feedFiles = listing
+      .filter((f) => f.isFile && FTP_FEED_FILE.test(f.name))
+      // YYYYMMDD sorts correctly as a string.
+      .sort((a, b) => a.name.match(FTP_FEED_FILE)![1].localeCompare(b.name.match(FTP_FEED_FILE)![1]));
+    const newest = feedFiles[feedFiles.length - 1];
+    if (!newest) {
+      throw new Error("No DealerCenter_YYYYMMDD_<dcid>.csv files found in the FTP drop folder");
+    }
+
+    const chunks: Buffer[] = [];
+    await client.downloadTo(
+      new Writable({
+        write(chunk, _enc, cb) {
+          chunks.push(chunk);
+          cb();
+        },
+      }),
+      newest.name
+    );
+    // DealerCenter exports Windows-1252 (em dashes arrive as 0x97 etc.).
+    return new TextDecoder("windows-1252").decode(Buffer.concat(chunks));
+  } finally {
+    client.close();
+  }
+}
+
 export class DealerCenterInventoryProvider implements InventoryProvider {
   name = "dealercenter";
 
   async fetchInventory(): Promise<DCFeedResponse> {
     const feedUrl = process.env.DEALERCENTER_INVENTORY_FEED_URL;
     const fetched_at = new Date().toISOString();
+
+    if (isFtpConfigured()) {
+      const csv = await fetchCsvViaFtp();
+      const vehicles = parseCsvFeed(csv);
+      if (vehicles.length === 0) {
+        throw new Error("DealerCenter FTP CSV parsed to zero vehicles");
+      }
+      return { vehicles, source: "csv", fetched_at };
+    }
 
     if (feedUrl && !feedUrl.includes("your_feed_url")) {
       const res = await fetch(feedUrl, {
