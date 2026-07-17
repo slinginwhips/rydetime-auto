@@ -1,6 +1,7 @@
 /**
- * Notification provider — email + SMS placeholders with console.log fallback.
- * Swap in a real transactional email service (Resend, SES) and Twilio when ready.
+ * Notification provider — email via Resend (RESEND_API_KEY), SMS via Twilio.
+ * Falls back to console.log when unconfigured, and reports that honestly by
+ * returning false so callers never mistake a dropped message for a delivery.
  */
 export interface NotificationPayload {
   subject: string;
@@ -12,12 +13,51 @@ export interface NotificationProvider {
   sendSms(message: string): Promise<boolean>;
 }
 
-class PlaceholderNotificationProvider implements NotificationProvider {
+/**
+ * Send an email to an arbitrary recipient via Resend.
+ * From-address: RESEND_FROM_EMAIL. Until the rydetimeauto.com domain is
+ * verified in Resend, use "onboarding@resend.dev" (delivers only to the
+ * Resend account owner's address); after verification, switch to
+ * "RydeTime Auto <leads@rydetimeauto.com>".
+ */
+export async function sendEmailTo(
+  to: string,
+  payload: NotificationPayload
+): Promise<boolean> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey || apiKey === "placeholder") {
+    console.log(`[notification:email] (Resend not configured) to=${to} subject="${payload.subject}"\n${payload.body}`);
+    return false;
+  }
+  const from = process.env.RESEND_FROM_EMAIL || "RydeTime Auto <onboarding@resend.dev>";
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ from, to, subject: payload.subject, text: payload.body }),
+    });
+    if (!res.ok) {
+      console.error(`[notification:email] Resend returned ${res.status}: ${await res.text()}`);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[notification:email] Resend request failed", err);
+    return false;
+  }
+}
+
+class DefaultNotificationProvider implements NotificationProvider {
   async sendEmail(payload: NotificationPayload): Promise<boolean> {
     const to = process.env.NOTIFICATION_EMAIL;
-    // TODO: wire to a transactional email provider (Resend / SES / SendGrid).
-    console.log(`[notification:email] to=${to || "(unset)"} subject="${payload.subject}"\n${payload.body}`);
-    return true;
+    if (!to) {
+      console.log(`[notification:email] NOTIFICATION_EMAIL unset, subject="${payload.subject}"`);
+      return false;
+    }
+    return sendEmailTo(to, payload);
   }
 
   async sendSms(message: string): Promise<boolean> {
@@ -26,14 +66,14 @@ class PlaceholderNotificationProvider implements NotificationProvider {
     const from = process.env.TWILIO_FROM_NUMBER;
     if (!sid || !token || !from || sid === "placeholder") {
       console.log(`[notification:sms] (Twilio not configured) ${message}`);
-      return true;
+      return false;
     }
     // Twilio configured — send via REST API (no SDK dependency needed).
     try {
       const to = process.env.NOTIFICATION_PHONE || "";
       if (!to) {
         console.log(`[notification:sms] NOTIFICATION_PHONE unset: ${message}`);
-        return true;
+        return false;
       }
       const res = await fetch(
         `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`,
@@ -54,7 +94,7 @@ class PlaceholderNotificationProvider implements NotificationProvider {
   }
 }
 
-const provider: NotificationProvider = new PlaceholderNotificationProvider();
+const provider: NotificationProvider = new DefaultNotificationProvider();
 
 export function getNotificationProvider(): NotificationProvider {
   return provider;

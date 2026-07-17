@@ -1,5 +1,5 @@
 import type { DCLead, DCLeadResult } from "@/types/dealercenter";
-import { sendNotification } from "@/lib/notificationProvider";
+import { sendNotification, sendEmailTo } from "@/lib/notificationProvider";
 
 /**
  * Lead provider abstraction. DealerCenter ADF/XML push is the current implementation.
@@ -91,12 +91,33 @@ export class DealerCenterLeadProvider implements LeadProvider {
       }
     }
 
-    // Email fallback: send the ADF/XML to the notification email so no lead is lost.
+    // ADF/XML email to DealerCenter's CRM lead-import address — the standard
+    // internet-lead intake route every dealer CRM supports.
+    const adfEmail = process.env.DEALERCENTER_ADF_EMAIL;
+    if (adfEmail && !adfEmail.includes("your_")) {
+      const sent = await sendEmailTo(adfEmail, {
+        subject: `New ${lead.lead_type} lead from rydetimeauto.com`,
+        body: adfXml,
+      });
+      if (sent) return { success: true, method: "adf_email" };
+      return {
+        success: false,
+        error: "ADF email to DealerCenter failed to send (check RESEND_API_KEY / Resend logs)",
+        method: "adf_email",
+      };
+    }
+
+    // Nothing configured: notify the dealership (best effort) and report the
+    // truth — the lead did NOT reach DealerCenter.
     await sendNotification({
       subject: `New ${lead.lead_type} lead: ${lead.first_name} ${lead.last_name || ""}`,
-      body: `ADF/XML lead (DealerCenter API not configured — manual entry may be required):\n\n${adfXml}`,
+      body: `ADF/XML lead (DealerCenter push not configured — enter manually in DealerCenter):\n\n${adfXml}`,
     });
-    return { success: true, method: "email_fallback" };
+    return {
+      success: false,
+      error: "No DealerCenter lead route configured (set DEALERCENTER_ADF_EMAIL or DEALERCENTER_LEAD_API_URL)",
+      method: "email_fallback",
+    };
   }
 }
 

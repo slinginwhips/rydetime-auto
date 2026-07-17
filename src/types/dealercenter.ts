@@ -58,7 +58,7 @@ export interface DCLeadResult {
   success: boolean;
   dc_lead_id?: string;
   error?: string;
-  method: "api" | "email_fallback" | "skipped";
+  method: "api" | "adf_email" | "email_fallback" | "skipped";
 }
 
 export interface SyncSummary {
