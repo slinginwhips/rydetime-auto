@@ -30,6 +30,8 @@ export async function sendEmailTo(
     return false;
   }
   const from = process.env.RESEND_FROM_EMAIL || "RydeTime Auto <onboarding@resend.dev>";
+  // Support comma-separated recipient lists (e.g. "ryan@…,dawn@…").
+  const recipients = to.split(",").map((a) => a.trim()).filter(Boolean);
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -37,7 +39,7 @@ export async function sendEmailTo(
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ from, to, subject: payload.subject, text: payload.body }),
+      body: JSON.stringify({ from, to: recipients, subject: payload.subject, text: payload.body }),
     });
     if (!res.ok) {
       console.error(`[notification:email] Resend returned ${res.status}: ${await res.text()}`);
