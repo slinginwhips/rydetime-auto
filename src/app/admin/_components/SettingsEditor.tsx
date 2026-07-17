@@ -11,7 +11,7 @@ interface SettingRow {
 const DEFAULT_KEYS: SettingRow[] = [
   { key: "business_hours", value: "Mon-Fri 10AM-6PM, Sat 10AM-5PM, Sun Closed" },
   { key: "contact_phone", value: "(757) 937-8664" },
-  { key: "contact_email", value: "info@rydetimeauto.com" },
+  { key: "contact_email", value: "dawn@rydetimeauto.com" },
   { key: "ai_chat_enabled", value: "true" },
   { key: "ai_greeting", value: "Hi! I'm the RydeTime Auto assistant. How can I help you find your next vehicle?" },
 ];

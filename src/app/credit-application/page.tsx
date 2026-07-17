@@ -6,7 +6,7 @@ import LeadForm from "@/components/LeadForm";
 export const metadata = generatePageMetadata({
   title: "Credit Application | RydeTime Auto — Suffolk, VA",
   description:
-    "Apply for used car financing through our secure application powered by DealerCenter. First-time buyers and rebuilding credit welcome. No pressure, no obligation.",
+    "Apply for used car financing at RydeTime Auto. First-time buyers and rebuilding credit welcome. No pressure, no obligation.",
   path: "/credit-application",
 });
 
@@ -25,10 +25,9 @@ export default function CreditApplicationPage() {
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-relaxed text-text-secondary">
             Applying doesn&apos;t commit you to anything. It just tells us your
-            situation so we can show you real options. We use a secure
-            application powered by DealerCenter — your sensitive information
-            goes directly through their encrypted system, never through our
-            website.
+            situation so we can show you real options. Your sensitive
+            information — SSN, date of birth — is never entered or stored on
+            this website.
           </p>
         </div>
       </section>
@@ -53,23 +52,45 @@ export default function CreditApplicationPage() {
 
             <div className="mt-6 rounded-lg border border-border-subtle bg-background-card p-6 sm:p-8">
               <h2 className="text-lg font-bold text-text-primary">
-                Step 2 — Complete the secure application
+                Step 2 — We finish it together
               </h2>
-              <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-                The application opens DealerCenter&apos;s secure portal in a
-                new tab. It takes about five minutes.
-              </p>
-              <a
-                href={creditAppUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-6 inline-flex w-full items-center justify-center rounded-md bg-accent px-8 py-4 text-base font-semibold text-white transition-colors hover:bg-accent-hover"
-              >
-                Continue to Secure Application →
-              </a>
-              <p className="mt-3 text-center text-xs text-text-muted">
-                Secure application powered by DealerCenter
-              </p>
+              {creditAppUrl ? (
+                <>
+                  <p className="mt-2 text-sm leading-relaxed text-text-secondary">
+                    The application opens a secure portal in a new tab. It
+                    takes about five minutes.
+                  </p>
+                  <a
+                    href={creditAppUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-6 inline-flex w-full items-center justify-center rounded-md bg-accent px-8 py-4 text-base font-semibold text-white transition-colors hover:bg-accent-hover"
+                  >
+                    Continue to Secure Application →
+                  </a>
+                  <p className="mt-3 text-center text-xs text-text-muted">
+                    Secure encrypted application
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="mt-2 text-sm leading-relaxed text-text-secondary">
+                    Once you save your info above, we&apos;ll reach out — usually
+                    the same day — and take the rest of your application securely
+                    over the phone. Your sensitive details (SSN, date of birth)
+                    are never entered on this website.
+                  </p>
+                  <a
+                    href={DEALERSHIP.phoneHref}
+                    className="mt-6 inline-flex w-full items-center justify-center rounded-md bg-accent px-8 py-4 text-base font-semibold text-white transition-colors hover:bg-accent-hover"
+                  >
+                    Or call us now: {DEALERSHIP.phone}
+                  </a>
+                  <p className="mt-3 text-center text-xs text-text-muted">
+                    Prefer texting? Same number.
+                  </p>
+                </>
+              )}
             </div>
           </div>
 

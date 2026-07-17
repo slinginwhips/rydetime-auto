@@ -13,7 +13,7 @@ export const FAQS: FaqEntry[] = [
   {
     question: "Do you finance bad credit?",
     answer:
-      "We work with lenders who handle a wide range of credit situations, including challenged and rebuilding credit. We won't promise everyone gets approved — no honest dealer can — but past credit problems don't automatically disqualify you. Approval and terms depend on your full picture: income, down payment, and how recent any issues are. Apply through our secure DealerCenter application and we'll show you what's realistic.",
+      "We work with lenders who handle a wide range of credit situations, including challenged and rebuilding credit. We won't promise everyone gets approved — no honest dealer can — but past credit problems don't automatically disqualify you. Approval and terms depend on your full picture: income, down payment, and how recent any issues are. Start your application on our site and we'll show you what's realistic.",
   },
   {
     question: "Can I trade in my vehicle?",

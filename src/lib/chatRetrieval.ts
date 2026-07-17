@@ -37,7 +37,7 @@ const EXTRA_KNOWLEDGE: KnowledgeEntry[] = [
     topic: "How financing works here",
     keywords: ["finance", "financing", "loan", "apply", "application", "approval", "approved", "lender", "credit", "down", "payment", "preapproval", "pre-approved"],
     text:
-      "Financing in four steps: (1) a quick, secure application through DealerCenter — about five minutes, no obligation; (2) we shop our lenders, who handle a wide range of credit situations, for options that fit the budget; (3) we review the real numbers together — payment, term, down payment, no surprise fees; (4) once the terms and the vehicle feel right, paperwork is finished and most deals wrap up the same day. The secure application lives at /credit-application.",
+      "Financing in four steps: (1) a quick application started on our site — about five minutes, no obligation; (2) we shop our lenders, who handle a wide range of credit situations, for options that fit the budget; (3) we review the real numbers together — payment, term, down payment, no surprise fees; (4) once the terms and the vehicle feel right, paperwork is finished and most deals wrap up the same day. The secure application lives at /credit-application.",
   },
   {
     id: "payment-estimates",
