@@ -115,7 +115,7 @@ create table if not exists leads (
   stock_number text,
   message text,
   lead_type text not null default 'inquiry' check (lead_type in (
-    'inquiry','test_drive','trade','finance','hold','chat','matchmaker','price_drop','carfax'
+    'inquiry','test_drive','trade','finance','hold','chat','matchmaker','price_drop','carfax','credit_app'
   )),
   budget text,
   down_payment text,
@@ -151,6 +151,83 @@ create table if not exists lead_events (
 );
 
 create index if not exists idx_lead_events_lead on lead_events (lead_id, created_at);
+
+-- ---------------------------------------------------------------------------
+-- credit_applications
+-- A signed online credit application, stored REDACTED. The full SSN is NEVER
+-- persisted here (only the last 4) and never logged — the complete application
+-- (with SSN) is transmitted in-flight to DealerCenter's CRM intake and, if that
+-- fails, the customer is re-contacted. This table is the audit record + the
+-- data the dealership needs to recognize and follow up on the application.
+-- ---------------------------------------------------------------------------
+create table if not exists credit_applications (
+  id uuid primary key default gen_random_uuid(),
+  lead_id uuid not null references leads(id) on delete cascade,
+
+  -- applicant (redacted — no full SSN)
+  first_name text not null,
+  middle_name text,
+  last_name text not null,
+  dob date,
+  ssn_last4 text,
+  drivers_license text,
+  email text,
+  phone text,
+
+  -- current residence
+  address text,
+  city text,
+  state text,
+  zip text,
+  housing_status text,            -- own / rent / other
+  years_at_address numeric,
+  months_at_address numeric,
+  monthly_housing_payment text,
+  prev_address text,              -- captured when < 2 yrs at current
+
+  -- employment & income
+  employment_status text,         -- employed / self_employed / retired / other
+  employer_name text,
+  job_title text,
+  work_phone text,
+  years_employed numeric,
+  months_employed numeric,
+  gross_monthly_income text,
+  other_income text,
+  other_income_source text,
+
+  -- co-applicant (optional; redacted)
+  co_first_name text,
+  co_last_name text,
+  co_dob date,
+  co_ssn_last4 text,
+  co_email text,
+  co_phone text,
+  co_employer_name text,
+  co_gross_monthly_income text,
+  co_relationship text,
+
+  -- deal
+  vehicle_id uuid references vehicles(id) on delete set null,
+  vin text,
+  stock_number text,
+  requested_down_payment text,
+  desired_monthly_payment text,
+
+  -- e-signature / consent audit (ESIGN/UETA + FCRA authorization)
+  signature_name text not null,
+  consent_credit_pull boolean not null default false,
+  signer_ip text,
+  signer_user_agent text,
+  signed_at timestamptz not null default now(),
+
+  dc_pushed boolean not null default false,
+  dc_pushed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_credit_apps_lead on credit_applications (lead_id);
+create index if not exists idx_credit_apps_created on credit_applications (created_at desc);
 
 -- ---------------------------------------------------------------------------
 -- chat_sessions / chat_messages
@@ -314,6 +391,7 @@ alter table vehicle_features enable row level security;
 alter table vehicle_prep_badges enable row level security;
 alter table leads enable row level security;
 alter table lead_events enable row level security;
+alter table credit_applications enable row level security;
 alter table chat_sessions enable row level security;
 alter table chat_messages enable row level security;
 alter table appointments enable row level security;

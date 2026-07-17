@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import SupabaseNotice from "../../_components/SupabaseNotice";
 import { safeQuery, adminDbReady, formatDateTime } from "../../_lib/adminData";
-import type { Lead, LeadEvent } from "@/types/lead";
+import type { Lead, LeadEvent, CreditApplication } from "@/types/lead";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +25,7 @@ export default async function AdminLeadDetailPage({
 }) {
   const { id } = await params;
 
-  const [lead, events] = await Promise.all([
+  const [lead, events, creditApp] = await Promise.all([
     safeQuery<Lead | null>(null, async (sb) => {
       const { data, error } = await sb
         .from("leads")
@@ -43,6 +43,15 @@ export default async function AdminLeadDetailPage({
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as LeadEvent[];
+    }),
+    safeQuery<CreditApplication | null>(null, async (sb) => {
+      const { data, error } = await sb
+        .from("credit_applications")
+        .select("*")
+        .eq("lead_id", id)
+        .maybeSingle();
+      if (error) throw error;
+      return data as CreditApplication | null;
     }),
   ]);
 
@@ -175,6 +184,92 @@ export default async function AdminLeadDetailPage({
                   </div>
                 )}
               </div>
+
+              {creditApp && (
+                <div className="rounded-lg border border-border-subtle bg-background-card p-6">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-bold text-text-primary">
+                      Signed Credit Application
+                    </h2>
+                    <span className="text-[11px] text-text-muted">
+                      Signed {formatDateTime(creditApp.signed_at)}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-text-muted">
+                    Full SSN is not stored — it was transmitted to DealerCenter. Last 4 shown for reference.
+                  </p>
+
+                  <h3 className="mt-5 text-xs font-semibold uppercase tracking-widest text-accent">
+                    Applicant
+                  </h3>
+                  <dl className="mt-3 grid gap-4 sm:grid-cols-2">
+                    <Field
+                      label="Name"
+                      value={`${creditApp.first_name} ${creditApp.middle_name ?? ""} ${creditApp.last_name}`.replace(/\s+/g, " ").trim()}
+                    />
+                    <Field label="Date of Birth" value={creditApp.dob} />
+                    <Field label="SSN" value={creditApp.ssn_last4 ? `***-**-${creditApp.ssn_last4}` : null} />
+                    <Field label="Driver's License" value={creditApp.drivers_license} />
+                    <Field
+                      label="Address"
+                      value={[creditApp.address, creditApp.city, creditApp.state, creditApp.zip].filter(Boolean).join(", ") || null}
+                    />
+                    <Field label="Housing" value={creditApp.housing_status} />
+                    <Field
+                      label="Time at Address"
+                      value={[creditApp.years_at_address && `${creditApp.years_at_address} yr`, creditApp.months_at_address && `${creditApp.months_at_address} mo`].filter(Boolean).join(" ") || null}
+                    />
+                    <Field label="Housing Payment" value={creditApp.monthly_housing_payment} />
+                    <Field label="Previous Address" value={creditApp.prev_address} />
+                  </dl>
+
+                  <h3 className="mt-5 text-xs font-semibold uppercase tracking-widest text-accent">
+                    Employment &amp; Income
+                  </h3>
+                  <dl className="mt-3 grid gap-4 sm:grid-cols-2">
+                    <Field label="Status" value={creditApp.employment_status} />
+                    <Field label="Employer" value={creditApp.employer_name} />
+                    <Field label="Job Title" value={creditApp.job_title} />
+                    <Field label="Work Phone" value={creditApp.work_phone} />
+                    <Field
+                      label="Time on Job"
+                      value={[creditApp.years_employed && `${creditApp.years_employed} yr`, creditApp.months_employed && `${creditApp.months_employed} mo`].filter(Boolean).join(" ") || null}
+                    />
+                    <Field label="Gross Monthly Income" value={creditApp.gross_monthly_income} />
+                    <Field label="Other Income" value={creditApp.other_income} />
+                    <Field label="Other Income Source" value={creditApp.other_income_source} />
+                  </dl>
+
+                  {creditApp.co_first_name && (
+                    <>
+                      <h3 className="mt-5 text-xs font-semibold uppercase tracking-widest text-accent">
+                        Co-Applicant
+                      </h3>
+                      <dl className="mt-3 grid gap-4 sm:grid-cols-2">
+                        <Field label="Name" value={`${creditApp.co_first_name} ${creditApp.co_last_name ?? ""}`.trim()} />
+                        <Field label="Relationship" value={creditApp.co_relationship} />
+                        <Field label="Date of Birth" value={creditApp.co_dob} />
+                        <Field label="SSN" value={creditApp.co_ssn_last4 ? `***-**-${creditApp.co_ssn_last4}` : null} />
+                        <Field label="Phone" value={creditApp.co_phone} />
+                        <Field label="Email" value={creditApp.co_email} />
+                        <Field label="Employer" value={creditApp.co_employer_name} />
+                        <Field label="Monthly Income" value={creditApp.co_gross_monthly_income} />
+                      </dl>
+                    </>
+                  )}
+
+                  <h3 className="mt-5 text-xs font-semibold uppercase tracking-widest text-accent">
+                    Deal &amp; Signature
+                  </h3>
+                  <dl className="mt-3 grid gap-4 sm:grid-cols-2">
+                    <Field label="Requested Down" value={creditApp.requested_down_payment} />
+                    <Field label="Desired Monthly" value={creditApp.desired_monthly_payment} />
+                    <Field label="Electronic Signature" value={creditApp.signature_name} />
+                    <Field label="Credit-Pull Consent" value={creditApp.consent_credit_pull ? "Authorized" : "No"} />
+                    <Field label="Signer IP" value={creditApp.signer_ip} />
+                  </dl>
+                </div>
+              )}
             </div>
 
             {/* Timeline */}

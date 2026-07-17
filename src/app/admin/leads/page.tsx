@@ -5,12 +5,13 @@ import type { Lead, LeadType } from "@/types/lead";
 
 export const dynamic = "force-dynamic";
 
-const HOT_TYPES: LeadType[] = ["chat", "hold", "test_drive"];
+const HOT_TYPES: LeadType[] = ["credit_app", "chat", "hold", "test_drive"];
 const ALL_TYPES: LeadType[] = [
   "inquiry",
   "test_drive",
   "trade",
   "finance",
+  "credit_app",
   "hold",
   "chat",
   "matchmaker",
