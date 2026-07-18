@@ -8,18 +8,18 @@ interface CarfaxButtonProps {
   size?: "sm" | "md";
 }
 
-// Official Carfax "Show me the CARFAX" button artwork (155x56), served from
-// Carfax's subscriber assets. Self-hosted from /public as the PRIMARY source:
-// Carfax intermittently blocks hotlinking that host, which is what made the
-// button render broken/"funky". The remote copy is only a last-resort fallback.
-const CARFAX_IMG = "/showmethecarfax.jpg";
-const CARFAX_IMG_REMOTE = "https://www.carfaxonline.com/assets/subscriber/showmethecarfax.jpg";
+// Official Carfax "SHOW ME THE CARFAX" logo, cropped tight from Carfax's
+// subscriber asset (the raw showmethecarfax.jpg has the logo jammed in the
+// top-left of a big white canvas — that baked-in white space was the "white
+// box, logo not centered" bug) and upscaled 3x so it stays smooth on hi-DPI
+// screens. It's black artwork on white, so it sits on a white button face.
+const CARFAX_LOGO = "/showmethecarfax-logo.png";
 
 /**
- * Official "SHOW ME THE CARFAX" button. The official artwork is a white-background
- * JPG, so the graphic itself IS the button face — no padding or pill behind it,
- * just rounded corners and a soft shadow so its white edge reads as a clean button
- * on the dark theme. Centered on vehicle pages (md); left-aligned on cards (sm).
+ * Official "SHOW ME THE CARFAX" button: the black logo centered on a clean
+ * white button face (rounded, soft shadow) so it reads as the recognizable
+ * Carfax button on the dark theme. Centered on vehicle pages (md); left-aligned
+ * on cards (sm).
  */
 export default function CarfaxButton({ vin, href, size = "md" }: CarfaxButtonProps) {
   const md = size === "md";
@@ -28,20 +28,18 @@ export default function CarfaxButton({ vin, href, size = "md" }: CarfaxButtonPro
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-block overflow-hidden rounded-lg shadow-md shadow-black/30 ring-1 ring-black/10 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/40"
+      className={`inline-flex items-center justify-center rounded-lg bg-white shadow-md shadow-black/30 ring-1 ring-black/10 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/40 ${
+        md ? "px-4 py-2.5" : "px-3 py-1.5"
+      }`}
       aria-label={`Show me the Carfax vehicle history report for VIN ${vin} (opens in a new tab)`}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={CARFAX_IMG}
-        onError={(e) => {
-          const img = e.currentTarget;
-          if (!img.src.endsWith(CARFAX_IMG_REMOTE)) img.src = CARFAX_IMG_REMOTE;
-        }}
+        src={CARFAX_LOGO}
         alt="Show me the Carfax"
-        width={155}
-        height={56}
-        className={`block w-auto ${md ? "h-12" : "h-9"}`}
+        width={264}
+        height={93}
+        className={`block w-auto ${md ? "h-7" : "h-5"}`}
       />
     </a>
   );
