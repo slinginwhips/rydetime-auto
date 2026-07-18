@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import InventoryClient from "@/components/InventoryClient";
-import { getVehicles, getMakesAndModels, type InventoryFilters } from "@/lib/vehicles";
+import { getVehiclesPage, getMakesAndModels, type InventoryFilters } from "@/lib/vehicles";
 import { generatePageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
@@ -35,12 +35,13 @@ export default async function InventoryPage({
 }) {
   const sp = await searchParams;
 
-  const page = Math.max(1, toNum(first(sp.page)) ?? 1);
+  const rawPage = Math.max(1, toNum(first(sp.page)) ?? 1);
   const sortParam = first(sp.sort);
   const validSorts = ["newest", "price_asc", "price_desc", "mileage_asc", "year_desc", "price_reduced"] as const;
+  // Default the listing to most-expensive-first when no sort is chosen.
   const sort = validSorts.includes(sortParam as (typeof validSorts)[number])
     ? (sortParam as InventoryFilters["sort"])
-    : "newest";
+    : "price_desc";
 
   const filters: InventoryFilters = {
     priceMin: toNum(first(sp.priceMin)),
@@ -57,18 +58,17 @@ export default async function InventoryPage({
     freshArrivals: first(sp.fresh) === "1" || undefined,
     priceReduced: first(sp.reduced) === "1" || undefined,
     sort,
-    // Fetch one extra row to detect whether more pages exist
-    limit: page * PAGE_SIZE + 1,
-    offset: 0,
+    limit: PAGE_SIZE,
+    offset: (rawPage - 1) * PAGE_SIZE,
   };
 
-  const [rows, makesAndModels] = await Promise.all([
-    getVehicles(filters),
+  const [{ vehicles, total }, makesAndModels] = await Promise.all([
+    getVehiclesPage(filters),
     getMakesAndModels(),
   ]);
 
-  const hasMore = rows.length > page * PAGE_SIZE;
-  const vehicles = rows.slice(0, page * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const page = Math.min(rawPage, totalPages);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
@@ -82,9 +82,9 @@ export default async function InventoryPage({
           <InventoryClient
             vehicles={vehicles}
             makesAndModels={makesAndModels}
-            pageSize={PAGE_SIZE}
             page={page}
-            hasMore={hasMore}
+            totalPages={totalPages}
+            total={total}
           />
         </Suspense>
       </div>

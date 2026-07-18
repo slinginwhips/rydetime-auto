@@ -59,7 +59,8 @@ function toCard(v: Vehicle): VehicleCard {
   };
 }
 
-function applyFiltersToMock(vehicles: Vehicle[], f: InventoryFilters): Vehicle[] {
+/** Apply all inventory filters + sort to the mock list (no pagination slice). */
+function filterSortMock(vehicles: Vehicle[], f: InventoryFilters): Vehicle[] {
   let out = vehicles.filter((v) => PUBLIC_STATUSES.includes(v.status));
   if (f.priceMin != null) out = out.filter((v) => v.price >= f.priceMin!);
   if (f.priceMax != null) out = out.filter((v) => v.price <= f.priceMax!);
@@ -84,20 +85,29 @@ function applyFiltersToMock(vehicles: Vehicle[], f: InventoryFilters): Vehicle[]
     case "price_reduced": out.sort((a, b) => Number(b.price_reduced) - Number(a.price_reduced)); break;
     default: out.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
   }
-  const offset = f.offset ?? 0;
-  const limit = f.limit ?? 24;
-  return out.slice(offset, offset + limit);
+  return out;
 }
 
-export async function getVehicles(filters: InventoryFilters = {}): Promise<VehicleCard[]> {
+/**
+ * Paginated inventory read. Returns the requested page of vehicle cards plus
+ * the total match count (drives numbered pagination). Falls back to mock data
+ * when Supabase isn't configured.
+ */
+export async function getVehiclesPage(
+  filters: InventoryFilters = {}
+): Promise<{ vehicles: VehicleCard[]; total: number }> {
+  const offset = filters.offset ?? 0;
+  const limit = filters.limit ?? 24;
+
   if (!isSupabaseConfigured() || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return applyFiltersToMock(MOCK_VEHICLES, filters).map(toCard);
+    const all = filterSortMock(MOCK_VEHICLES, filters);
+    return { vehicles: all.slice(offset, offset + limit).map(toCard), total: all.length };
   }
   try {
     const supabase = getSupabaseAdmin();
     let q = supabase
       .from("vehicles")
-      .select("*, vehicle_photos(*)")
+      .select("*, vehicle_photos(*)", { count: "exact" })
       .in("status", PUBLIC_STATUSES);
 
     if (filters.priceMin != null) q = q.gte("price", filters.priceMin);
@@ -123,17 +133,20 @@ export async function getVehicles(filters: InventoryFilters = {}): Promise<Vehic
       default: q = q.order("created_at", { ascending: false });
     }
 
-    const offset = filters.offset ?? 0;
-    const limit = filters.limit ?? 24;
     q = q.range(offset, offset + limit - 1);
 
-    const { data, error } = await q;
+    const { data, error, count } = await q;
     if (error) throw error;
-    return (data as Vehicle[]).map(toCard);
+    const vehicles = (data as Vehicle[]).map(toCard);
+    return { vehicles, total: count ?? vehicles.length };
   } catch (err) {
-    console.error("[vehicles] getVehicles failed, returning empty:", err);
-    return [];
+    console.error("[vehicles] getVehiclesPage failed, returning empty:", err);
+    return { vehicles: [], total: 0 };
   }
+}
+
+export async function getVehicles(filters: InventoryFilters = {}): Promise<VehicleCard[]> {
+  return (await getVehiclesPage(filters)).vehicles;
 }
 
 export async function getFeaturedVehicles(limit = 4): Promise<VehicleCard[]> {

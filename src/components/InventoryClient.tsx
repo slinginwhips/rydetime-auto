@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import VehicleCard from "@/components/VehicleCard";
@@ -10,9 +10,22 @@ import type { VehicleCard as VehicleCardType } from "@/types/vehicle";
 interface InventoryClientProps {
   vehicles: VehicleCardType[];
   makesAndModels: { make: string; models: string[] }[];
-  pageSize: number;
   page: number;
-  hasMore: boolean;
+  totalPages: number;
+  total: number;
+}
+
+/** Compact page list with ellipses, e.g. [1, "…", 4, 5, 6, "…", 12]. */
+function buildPageList(current: number, totalPages: number): (number | "…")[] {
+  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+  const pages: (number | "…")[] = [1];
+  if (current > 3) pages.push("…");
+  for (let i = Math.max(2, current - 1); i <= Math.min(totalPages - 1, current + 1); i++) {
+    pages.push(i);
+  }
+  if (current < totalPages - 2) pages.push("…");
+  pages.push(totalPages);
+  return pages;
 }
 
 const BODY_STYLES = ["Sedan", "SUV", "Truck", "Van", "Coupe", "Hatchback", "Wagon", "Convertible"];
@@ -46,18 +59,31 @@ const inputClass =
 export default function InventoryClient({
   vehicles,
   makesAndModels,
-  pageSize,
   page,
-  hasMore,
+  totalPages,
+  total,
 }: InventoryClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  // Increments on every filter/sort change so card Reveals re-key and re-stagger
+  // Increments on every filter/sort/page change so card Reveals re-key and re-stagger
   const [filterEpoch, setFilterEpoch] = useState(0);
+  // Scroll anchor: jump back to the top of the results when the page changes.
+  const topRef = useRef<HTMLDivElement>(null);
 
   const get = (key: string) => searchParams.get(key) ?? "";
+
+  const goToPage = (n: number) => {
+    setFilterEpoch((e) => e + 1);
+    const next = new URLSearchParams(searchParams.toString());
+    if (n <= 1) next.delete("page");
+    else next.set("page", String(n));
+    startTransition(() => {
+      router.replace(`/inventory${next.toString() ? `?${next}` : ""}`, { scroll: false });
+    });
+    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const setParams = (updates: Record<string, string | null>, resetPage = true) => {
     const next = new URLSearchParams(searchParams.toString());
@@ -279,6 +305,9 @@ export default function InventoryClient({
 
   return (
     <div>
+      {/* Scroll anchor for pagination (offset for any sticky header) */}
+      <div ref={topRef} className="scroll-mt-24" />
+
       {/* Quick filter chips */}
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
         {QUICK_FILTERS.map((qf) => (
@@ -312,14 +341,14 @@ export default function InventoryClient({
           Filters
         </button>
         <p className="hidden text-sm text-text-secondary lg:block" aria-live="polite">
-          {vehicles.length}{hasMore ? "+" : ""} vehicle{vehicles.length === 1 ? "" : "s"}
+          {total} vehicle{total === 1 ? "" : "s"}
           {isPending && " · updating…"}
         </p>
         <select
           aria-label="Sort vehicles"
           className="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary transition-colors duration-200 focus:border-accent focus:outline-none"
-          value={get("sort") || "newest"}
-          onChange={(e) => setParams({ sort: e.target.value === "newest" ? null : e.target.value })}
+          value={get("sort") || "price_desc"}
+          onChange={(e) => setParams({ sort: e.target.value === "price_desc" ? null : e.target.value })}
         >
           {SORT_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
@@ -344,17 +373,54 @@ export default function InventoryClient({
                   </Reveal>
                 ))}
               </div>
-              {hasMore && (
-                <div className="mt-8 text-center">
+              {totalPages > 1 && (
+                <nav
+                  className="mt-10 flex flex-wrap items-center justify-center gap-2"
+                  aria-label="Inventory pagination"
+                >
                   <button
                     type="button"
-                    disabled={isPending}
-                    onClick={() => setParams({ page: String(page + 1) }, false)}
-                    className="rounded-md border border-border-subtle px-8 py-3 text-sm font-semibold text-text-primary transition-colors hover:border-accent disabled:opacity-60"
+                    disabled={page <= 1 || isPending}
+                    onClick={() => goToPage(page - 1)}
+                    className="rounded-md border border-border-subtle px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:border-accent disabled:cursor-not-allowed disabled:opacity-40"
+                    aria-label="Previous page"
                   >
-                    {isPending ? "Loading…" : "Load More Vehicles"}
+                    Prev
                   </button>
-                </div>
+
+                  {buildPageList(page, totalPages).map((p, i) =>
+                    p === "…" ? (
+                      <span key={`gap-${i}`} className="px-2 text-sm text-text-muted" aria-hidden="true">
+                        …
+                      </span>
+                    ) : (
+                      <button
+                        key={p}
+                        type="button"
+                        disabled={isPending}
+                        onClick={() => goToPage(p)}
+                        aria-current={p === page ? "page" : undefined}
+                        className={`min-w-[2.5rem] rounded-md border px-3 py-2 text-sm font-semibold transition-colors ${
+                          p === page
+                            ? "border-accent bg-accent text-white"
+                            : "border-border-subtle text-text-primary hover:border-accent"
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    )
+                  )}
+
+                  <button
+                    type="button"
+                    disabled={page >= totalPages || isPending}
+                    onClick={() => goToPage(page + 1)}
+                    className="rounded-md border border-border-subtle px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:border-accent disabled:cursor-not-allowed disabled:opacity-40"
+                    aria-label="Next page"
+                  >
+                    Next
+                  </button>
+                </nav>
               )}
             </>
           ) : (
