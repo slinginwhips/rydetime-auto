@@ -116,11 +116,16 @@ export default function VehicleCard({ vehicle: v }: VehicleCardProps) {
 
         {/* Carfax: trust badges (the ones this car qualifies for) + report button */}
         <div className="mt-3 space-y-2">
-          {(v.carfax_badge_great_value || v.carfax_badge_one_owner) && (
+          {(v.carfax_badge_great_value || v.carfax_badge_good_value || v.carfax_badge_one_owner) && (
             <div className="flex flex-wrap gap-1.5">
               {v.carfax_badge_great_value && (
                 <span className="inline-flex items-center gap-1 rounded-full border border-[#F47B20]/40 bg-[#F47B20]/10 px-2 py-0.5 text-[11px] font-semibold text-[#F9A05B]">
                   <CarfaxCheck /> Great Value
+                </span>
+              )}
+              {v.carfax_badge_good_value && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-[#F47B20]/40 bg-[#F47B20]/10 px-2 py-0.5 text-[11px] font-semibold text-[#F9A05B]">
+                  <CarfaxCheck /> Good Value
                 </span>
               )}
               {v.carfax_badge_one_owner && (

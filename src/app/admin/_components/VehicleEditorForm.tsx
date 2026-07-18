@@ -37,6 +37,7 @@ export default function VehicleEditorForm({ vehicle }: { vehicle: Vehicle }) {
     carfax_badge_accident_free: vehicle.carfax_badge_accident_free ?? false,
     carfax_badge_service_records: vehicle.carfax_badge_service_records ?? false,
     carfax_badge_great_value: vehicle.carfax_badge_great_value ?? false,
+    carfax_badge_good_value: vehicle.carfax_badge_good_value ?? false,
     video_url: vehicle.video_url ?? "",
   });
   const [badges, setBadges] = useState<PrepBadgeType[]>(
@@ -73,6 +74,7 @@ export default function VehicleEditorForm({ vehicle }: { vehicle: Vehicle }) {
           carfax_badge_accident_free: form.carfax_badge_accident_free,
           carfax_badge_service_records: form.carfax_badge_service_records,
           carfax_badge_great_value: form.carfax_badge_great_value,
+          carfax_badge_good_value: form.carfax_badge_good_value,
           video_url: form.video_url || null,
           prep_badges: badges,
         }),
@@ -267,10 +269,11 @@ export default function VehicleEditorForm({ vehicle }: { vehicle: Vehicle }) {
 
       <div>
         <p className={labelClass}>Carfax Badges (shown on the listing + car page)</p>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
           {([
             ["carfax_badge_one_owner", "1-Owner"],
             ["carfax_badge_great_value", "Great Value"],
+            ["carfax_badge_good_value", "Good Value"],
             ["carfax_badge_accident_free", "No Accidents"],
             ["carfax_badge_service_records", "Service History"],
           ] as const).map(([key, label]) => (

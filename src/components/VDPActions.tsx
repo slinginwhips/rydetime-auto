@@ -23,6 +23,7 @@ interface VDPActionsProps {
       accidentFree: boolean;
       serviceRecords: boolean;
       greatValue: boolean;
+      goodValue: boolean;
     };
   };
 }
@@ -91,6 +92,7 @@ export default function VDPActions({ vehicle }: VDPActionsProps) {
           accidentFree={vehicle.carfaxBadges.accidentFree}
           serviceRecords={vehicle.carfaxBadges.serviceRecords}
           greatValue={vehicle.carfaxBadges.greatValue}
+          goodValue={vehicle.carfaxBadges.goodValue}
           href={vehicle.carfaxUrl}
           className="justify-center"
         />

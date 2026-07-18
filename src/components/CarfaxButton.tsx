@@ -8,57 +8,44 @@ interface CarfaxButtonProps {
   size?: "sm" | "md";
 }
 
+// Official Carfax "Show me the CARFAX" button artwork (155x56), served from
+// Carfax's subscriber assets. Self-hosted from /public as the PRIMARY source:
+// Carfax intermittently blocks hotlinking that host, which is what made the
+// button render broken/"funky". The remote copy is only a last-resort fallback.
+const CARFAX_IMG = "/showmethecarfax.jpg";
+const CARFAX_IMG_REMOTE = "https://www.carfaxonline.com/assets/subscriber/showmethecarfax.jpg";
+
 /**
- * "SHOW ME THE CARFAX" report link, rendered in crisp HTML/SVG instead of the
- * old low-resolution raster button (which looked pixelated on high-DPI screens
- * next to the vector text buttons). White face so it reads as the recognizable
- * Carfax button on the dark theme, with the signature fox-orange check.
+ * Official "SHOW ME THE CARFAX" button. The official artwork is a white-background
+ * JPG, so the graphic itself IS the button face — no padding or pill behind it,
+ * just rounded corners and a soft shadow so its white edge reads as a clean button
+ * on the dark theme. Centered on vehicle pages (md); left-aligned on cards (sm).
  */
 export default function CarfaxButton({ vin, href, size = "md" }: CarfaxButtonProps) {
   const md = size === "md";
-  return (
+  const link = (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
+      className="inline-block overflow-hidden rounded-lg shadow-md shadow-black/30 ring-1 ring-black/10 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/40"
       aria-label={`Show me the Carfax vehicle history report for VIN ${vin} (opens in a new tab)`}
-      className={`inline-flex items-center rounded-lg bg-white text-black shadow-md shadow-black/25 ring-1 ring-black/10 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/40 ${
-        md ? "gap-2.5 px-4 py-2.5" : "gap-1.5 px-2.5 py-1.5"
-      }`}
     >
-      {/* Carfax fox-orange check badge */}
-      <span
-        className={`flex flex-shrink-0 items-center justify-center rounded-md bg-[#F47B20] ${
-          md ? "h-7 w-7" : "h-5 w-5"
-        }`}
-      >
-        <svg viewBox="0 0 24 24" className={md ? "h-4 w-4" : "h-3 w-3"} fill="none" aria-hidden="true">
-          <path
-            d="M5 12.5 L10 17.5 L19 6.5"
-            stroke="#FFFFFF"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </span>
-      <span className="flex flex-col items-start leading-none">
-        <span
-          className={`font-semibold uppercase tracking-wide text-[#5B5B5B] ${
-            md ? "text-[10px]" : "text-[8px]"
-          }`}
-        >
-          Show me the
-        </span>
-        <span
-          className={`font-extrabold uppercase tracking-tight text-[#111111] ${
-            md ? "text-[17px]" : "text-[12px]"
-          }`}
-        >
-          Carfax
-          <sup className={md ? "text-[8px]" : "text-[6px]"}>&reg;</sup>
-        </span>
-      </span>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={CARFAX_IMG}
+        onError={(e) => {
+          const img = e.currentTarget;
+          if (!img.src.endsWith(CARFAX_IMG_REMOTE)) img.src = CARFAX_IMG_REMOTE;
+        }}
+        alt="Show me the Carfax"
+        width={155}
+        height={56}
+        className={`block w-auto ${md ? "h-12" : "h-9"}`}
+      />
     </a>
   );
+
+  // md: center it in the VDP action stack. sm: sit inline-left in the card body.
+  return md ? <div className="flex justify-center">{link}</div> : link;
 }

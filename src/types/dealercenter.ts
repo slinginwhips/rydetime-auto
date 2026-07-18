@@ -26,6 +26,7 @@ export interface DCVehicle {
   carfax_accident_free?: boolean;
   carfax_service_records?: boolean;
   carfax_great_value?: boolean;
+  carfax_good_value?: boolean;
   dc_vehicle_url?: string;
   video_url?: string;
   status?: string;

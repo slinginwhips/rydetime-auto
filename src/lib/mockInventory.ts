@@ -46,6 +46,7 @@ const base = {
   dc_last_synced: now,
   seats: 5,
   carfax_badge_great_value: false,
+  carfax_badge_good_value: false,
 };
 
 export const MOCK_VEHICLES: Vehicle[] = [

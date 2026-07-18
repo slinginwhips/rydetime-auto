@@ -30,6 +30,7 @@ export interface Vehicle {
   carfax_badge_accident_free: boolean;
   carfax_badge_service_records: boolean;
   carfax_badge_great_value: boolean;
+  carfax_badge_good_value: boolean;
   dc_vehicle_url: string | null;
   featured: boolean;
   ryans_pick: boolean;
@@ -104,6 +105,7 @@ export interface VehicleCard {
   carfax_badge_accident_free: boolean;
   carfax_badge_service_records: boolean;
   carfax_badge_great_value: boolean;
+  carfax_badge_good_value: boolean;
   featured: boolean;
   ryans_pick: boolean;
   price_reduced: boolean;
@@ -116,7 +118,7 @@ export interface VehicleCard {
 }
 
 export const VEHICLE_CARD_COLUMNS =
-  "id, vin, stock_number, year, make, model, trim, body_style, mileage, price, status, slug, carfax_url, carfax_badge_one_owner, carfax_badge_accident_free, carfax_badge_service_records, carfax_badge_great_value, featured, ryans_pick, price_reduced, original_price, days_in_inventory, fuel_type, transmission, drivetrain, vehicle_photos(url, is_primary, sort_order)";
+  "id, vin, stock_number, year, make, model, trim, body_style, mileage, price, status, slug, carfax_url, carfax_badge_one_owner, carfax_badge_accident_free, carfax_badge_service_records, carfax_badge_great_value, carfax_badge_good_value, featured, ryans_pick, price_reduced, original_price, days_in_inventory, fuel_type, transmission, drivetrain, vehicle_photos(url, is_primary, sort_order)";
 
 /** Standard payment estimate assumptions used site-wide */
 export const PAYMENT_DEFAULTS = {

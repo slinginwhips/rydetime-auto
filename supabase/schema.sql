@@ -36,6 +36,7 @@ create table if not exists vehicles (
   carfax_badge_accident_free boolean not null default false,
   carfax_badge_service_records boolean not null default false,
   carfax_badge_great_value boolean not null default false,
+  carfax_badge_good_value boolean not null default false,
   dc_vehicle_url text,
   featured boolean not null default false,
   ryans_pick boolean not null default false,

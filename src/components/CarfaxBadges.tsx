@@ -3,6 +3,7 @@ interface CarfaxBadgesProps {
   accidentFree: boolean;
   serviceRecords: boolean;
   greatValue: boolean;
+  goodValue: boolean;
   /** Optional Carfax report link — badges become clickable when provided. */
   href?: string;
   className?: string;
@@ -24,11 +25,13 @@ export default function CarfaxBadges({
   accidentFree,
   serviceRecords,
   greatValue,
+  goodValue,
   href,
   className = "",
 }: CarfaxBadgesProps) {
   const badges: BadgeDef[] = [];
   if (greatValue) badges.push({ label: "CARFAX Great Value", highlight: true });
+  if (goodValue) badges.push({ label: "CARFAX Good Value", highlight: true });
   if (oneOwner) badges.push({ label: "CARFAX 1-Owner" });
   if (accidentFree) badges.push({ label: "No Accidents Reported" });
   if (serviceRecords) badges.push({ label: "Service History" });

@@ -313,6 +313,7 @@ export default async function VehicleDetailPage({ params }: VDPProps) {
                     accidentFree: vehicle.carfax_badge_accident_free,
                     serviceRecords: vehicle.carfax_badge_service_records,
                     greatValue: vehicle.carfax_badge_great_value,
+                    goodValue: vehicle.carfax_badge_good_value,
                   },
                 }}
               />

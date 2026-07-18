@@ -29,6 +29,7 @@ const updateSchema = z.object({
   carfax_badge_accident_free: z.boolean().optional(),
   carfax_badge_service_records: z.boolean().optional(),
   carfax_badge_great_value: z.boolean().optional(),
+  carfax_badge_good_value: z.boolean().optional(),
   video_url: z.string().max(2000).nullable().optional(),
   prep_badges: z.array(z.enum(PREP_BADGES)).optional(),
 });

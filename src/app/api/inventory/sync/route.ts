@@ -100,6 +100,7 @@ function buildVehicleRow(
     carfax_badge_accident_free: dc.carfax_accident_free ?? false,
     carfax_badge_service_records: dc.carfax_service_records ?? false,
     carfax_badge_great_value: dc.carfax_great_value ?? false,
+    carfax_badge_good_value: dc.carfax_good_value ?? false,
     dc_vehicle_url: dc.dc_vehicle_url ?? null,
     video_url: dc.video_url ?? null,
     days_in_inventory: days,
