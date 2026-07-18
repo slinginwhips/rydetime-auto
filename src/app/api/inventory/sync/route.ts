@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdminRequest } from "@/lib/adminAuth";
+import { isAdminRequest, isCronRequest } from "@/lib/adminAuth";
 import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import { getInventoryProvider } from "@/lib/inventoryProvider";
 import { sendNotification } from "@/lib/notificationProvider";
@@ -111,7 +111,7 @@ function buildVehicleRow(
 }
 
 async function runSync(req: NextRequest): Promise<NextResponse> {
-  if (!isAdminRequest(req)) {
+  if (!isAdminRequest(req) && !isCronRequest(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   if (!isSupabaseConfigured() || !process.env.SUPABASE_SERVICE_ROLE_KEY) {

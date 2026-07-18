@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ADMIN_COOKIE } from "@/lib/adminAuth";
+import { ADMIN_COOKIE, isValidAdminSecret } from "@/lib/adminAuth";
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -9,12 +9,9 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const secret = process.env.ADMIN_SECRET;
   const cookie = req.cookies.get(ADMIN_COOKIE)?.value;
 
-  const authorized = Boolean(
-    secret && !secret.includes("your_admin_secret") && cookie === secret
-  );
+  const authorized = isValidAdminSecret(cookie);
 
   if (!authorized) {
     const loginUrl = req.nextUrl.clone();

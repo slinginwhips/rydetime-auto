@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { ADMIN_COOKIE } from "@/lib/adminAuth";
+import { ADMIN_COOKIE, getAdminSecrets, isValidAdminSecret } from "@/lib/adminAuth";
 
 export const dynamic = "force-dynamic";
 
@@ -22,16 +22,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: "Secret is required" }, { status: 400 });
     }
 
-    const adminSecret = process.env.ADMIN_SECRET;
-    if (!adminSecret || adminSecret.includes("your_admin_secret")) {
+    if (getAdminSecrets().length === 0) {
       return NextResponse.json({ error: "Admin access is not configured" }, { status: 503 });
     }
-    if (parsed.data.secret !== adminSecret) {
+    if (!isValidAdminSecret(parsed.data.secret)) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
     const res = NextResponse.json({ success: true });
-    res.cookies.set(ADMIN_COOKIE, adminSecret, {
+    // Store the exact secret the user logged in with, so each person's session
+    // is tied to their own secret and is revoked if that one is removed.
+    res.cookies.set(ADMIN_COOKIE, parsed.data.secret, {
       httpOnly: true,
       path: "/",
       sameSite: "lax",
