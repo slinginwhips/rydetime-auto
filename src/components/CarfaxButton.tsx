@@ -4,37 +4,61 @@ interface CarfaxButtonProps {
   vin: string;
   /** Resolved, partner-attributed Carfax report URL for this VIN. */
   href: string;
+  /** "md" for vehicle pages, "sm" for inventory cards. */
+  size?: "sm" | "md";
 }
 
-// Official Carfax "Show me the CARFAX" button image (156x56), self-hosted from
-// /public so it renders reliably on every network (the carfaxonline.com copy is
-// behind a subscriber host that intermittently blocks hotlinking).
-const CARFAX_IMG = "/showmethecarfax.jpg";
-
 /**
- * Official "SHOW ME THE CARFAX" button. The official artwork is a white-background
- * JPG, so the graphic itself IS the button face — no padding or pill behind it,
- * just rounded corners and a shadow so its white bg reads as a clean button edge.
+ * "SHOW ME THE CARFAX" report link, rendered in crisp HTML/SVG instead of the
+ * old low-resolution raster button (which looked pixelated on high-DPI screens
+ * next to the vector text buttons). White face so it reads as the recognizable
+ * Carfax button on the dark theme, with the signature fox-orange check.
  */
-export default function CarfaxButton({ vin, href }: CarfaxButtonProps) {
+export default function CarfaxButton({ vin, href, size = "md" }: CarfaxButtonProps) {
+  const md = size === "md";
   return (
-    <div className="flex justify-center">
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-block overflow-hidden rounded-lg shadow-md shadow-black/30 ring-1 ring-black/10 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/40"
-        aria-label={`Show me the Carfax vehicle history report for VIN ${vin} (opens in a new tab)`}
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={`Show me the Carfax vehicle history report for VIN ${vin} (opens in a new tab)`}
+      className={`inline-flex items-center rounded-lg bg-white text-black shadow-md shadow-black/25 ring-1 ring-black/10 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/40 ${
+        md ? "gap-2.5 px-4 py-2.5" : "gap-1.5 px-2.5 py-1.5"
+      }`}
+    >
+      {/* Carfax fox-orange check badge */}
+      <span
+        className={`flex flex-shrink-0 items-center justify-center rounded-md bg-[#F47B20] ${
+          md ? "h-7 w-7" : "h-5 w-5"
+        }`}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={CARFAX_IMG}
-          alt="Show me the Carfax"
-          width={156}
-          height={56}
-          className="block h-12 w-auto"
-        />
-      </a>
-    </div>
+        <svg viewBox="0 0 24 24" className={md ? "h-4 w-4" : "h-3 w-3"} fill="none" aria-hidden="true">
+          <path
+            d="M5 12.5 L10 17.5 L19 6.5"
+            stroke="#FFFFFF"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </span>
+      <span className="flex flex-col items-start leading-none">
+        <span
+          className={`font-semibold uppercase tracking-wide text-[#5B5B5B] ${
+            md ? "text-[10px]" : "text-[8px]"
+          }`}
+        >
+          Show me the
+        </span>
+        <span
+          className={`font-extrabold uppercase tracking-tight text-[#111111] ${
+            md ? "text-[17px]" : "text-[12px]"
+          }`}
+        >
+          Carfax
+          <sup className={md ? "text-[8px]" : "text-[6px]"}>&reg;</sup>
+        </span>
+      </span>
+    </a>
   );
 }

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import Logo from "@/components/Logo";
+import CarfaxButton from "@/components/CarfaxButton";
 import { estimateMonthlyPayment, type VehicleCard as VehicleCardType } from "@/types/vehicle";
 
 interface VehicleCardProps {
@@ -129,24 +130,9 @@ export default function VehicleCard({ vehicle: v }: VehicleCardProps) {
               )}
             </div>
           )}
-          <a
-            href={v.carfax_report_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            aria-label={`Show me the Carfax for ${title} (opens in a new tab)`}
-            className="inline-block overflow-hidden rounded-md shadow-sm shadow-black/25 ring-1 ring-black/10 transition-transform duration-200 hover:-translate-y-0.5"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/showmethecarfax.jpg"
-              alt="Show me the Carfax"
-              width={156}
-              height={56}
-              className="block h-8 w-auto"
-              loading="lazy"
-            />
-          </a>
+          <div onClick={(e) => e.stopPropagation()}>
+            <CarfaxButton vin={v.vin} href={v.carfax_report_url} size="sm" />
+          </div>
         </div>
 
         {/* CTAs */}
