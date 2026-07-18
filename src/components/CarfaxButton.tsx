@@ -6,11 +6,10 @@ interface CarfaxButtonProps {
   href: string;
 }
 
-// Official Carfax "Show me the CARFAX" button image (156x56). Hotlinked from
-// Carfax per their subscriber guidance; falls back to a self-hosted copy if
-// the remote asset is ever unreachable.
-const CARFAX_IMG = "https://www.carfaxonline.com/assets/subscriber/showmethecarfax.jpg";
-const CARFAX_IMG_FALLBACK = "/showmethecarfax.jpg";
+// Official Carfax "Show me the CARFAX" button image (156x56), self-hosted from
+// /public so it renders reliably on every network (the carfaxonline.com copy is
+// behind a subscriber host that intermittently blocks hotlinking).
+const CARFAX_IMG = "/showmethecarfax.jpg";
 
 /**
  * Official "SHOW ME THE CARFAX" button. The official artwork is a white-background
@@ -30,10 +29,6 @@ export default function CarfaxButton({ vin, href }: CarfaxButtonProps) {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={CARFAX_IMG}
-          onError={(e) => {
-            const img = e.currentTarget;
-            if (img.src !== window.location.origin + CARFAX_IMG_FALLBACK) img.src = CARFAX_IMG_FALLBACK;
-          }}
           alt="Show me the Carfax"
           width={156}
           height={56}

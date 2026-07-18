@@ -25,6 +25,10 @@ const updateSchema = z.object({
   ryans_pick: z.boolean().optional(),
   status: z.enum(["active", "sold", "hold_pending", "fresh_arrival"]).optional(),
   carfax_url: z.string().max(2000).nullable().optional(),
+  carfax_badge_one_owner: z.boolean().optional(),
+  carfax_badge_accident_free: z.boolean().optional(),
+  carfax_badge_service_records: z.boolean().optional(),
+  carfax_badge_great_value: z.boolean().optional(),
   video_url: z.string().max(2000).nullable().optional(),
   prep_badges: z.array(z.enum(PREP_BADGES)).optional(),
 });

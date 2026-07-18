@@ -98,6 +98,12 @@ export interface VehicleCard {
   status: VehicleStatus;
   slug: string;
   carfax_url: string | null;
+  /** Partner-attributed Carfax report URL, prebuilt server-side from the VIN. */
+  carfax_report_url: string;
+  carfax_badge_one_owner: boolean;
+  carfax_badge_accident_free: boolean;
+  carfax_badge_service_records: boolean;
+  carfax_badge_great_value: boolean;
   featured: boolean;
   ryans_pick: boolean;
   price_reduced: boolean;
@@ -110,7 +116,7 @@ export interface VehicleCard {
 }
 
 export const VEHICLE_CARD_COLUMNS =
-  "id, vin, stock_number, year, make, model, trim, body_style, mileage, price, status, slug, carfax_url, featured, ryans_pick, price_reduced, original_price, days_in_inventory, fuel_type, transmission, drivetrain, vehicle_photos(url, is_primary, sort_order)";
+  "id, vin, stock_number, year, make, model, trim, body_style, mileage, price, status, slug, carfax_url, carfax_badge_one_owner, carfax_badge_accident_free, carfax_badge_service_records, carfax_badge_great_value, featured, ryans_pick, price_reduced, original_price, days_in_inventory, fuel_type, transmission, drivetrain, vehicle_photos(url, is_primary, sort_order)";
 
 /** Standard payment estimate assumptions used site-wide */
 export const PAYMENT_DEFAULTS = {

@@ -1,5 +1,6 @@
 import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import { MOCK_VEHICLES } from "@/lib/mockInventory";
+import { getCarfaxProvider } from "@/lib/carfaxProvider";
 import type { Vehicle, VehicleCard, VehicleStatus } from "@/types/vehicle";
 
 /**
@@ -47,6 +48,11 @@ function toCard(v: Vehicle): VehicleCard {
     status: v.status,
     slug: v.slug,
     carfax_url: v.carfax_url,
+    carfax_report_url: getCarfaxProvider().getReportUrl(v.vin, v.carfax_url),
+    carfax_badge_one_owner: v.carfax_badge_one_owner ?? false,
+    carfax_badge_accident_free: v.carfax_badge_accident_free ?? false,
+    carfax_badge_service_records: v.carfax_badge_service_records ?? false,
+    carfax_badge_great_value: v.carfax_badge_great_value ?? false,
     featured: v.featured,
     ryans_pick: v.ryans_pick,
     price_reduced: v.price_reduced,

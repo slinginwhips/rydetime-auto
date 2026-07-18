@@ -15,6 +15,23 @@ export function openChatForVehicle(vehicleId?: string) {
   );
 }
 
+/** Carfax fox-orange check mark used inside the trust badges. */
+function CarfaxCheck() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="11" fill="#F47B20" />
+      <path
+        d="M7 12.5 L10.5 16 L17 8.5"
+        stroke="#FFFFFF"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </svg>
+  );
+}
+
 export default function VehicleCard({ vehicle: v }: VehicleCardProps) {
   const title = [v.year, v.make, v.model].join(" ");
   const monthly = estimateMonthlyPayment(v.price);
@@ -96,14 +113,41 @@ export default function VehicleCard({ vehicle: v }: VehicleCardProps) {
           <p className="text-xs text-text-muted">Stock #{v.stock_number}</p>
         </div>
 
-        {v.carfax_url && (
-          <p className="shimmer-hover mt-2 flex w-fit items-center gap-1.5 rounded text-xs text-text-secondary">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#F47B20" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-            Carfax Report Available
-          </p>
-        )}
+        {/* Carfax: trust badges (the ones this car qualifies for) + report button */}
+        <div className="mt-3 space-y-2">
+          {(v.carfax_badge_great_value || v.carfax_badge_one_owner) && (
+            <div className="flex flex-wrap gap-1.5">
+              {v.carfax_badge_great_value && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-[#F47B20]/40 bg-[#F47B20]/10 px-2 py-0.5 text-[11px] font-semibold text-[#F9A05B]">
+                  <CarfaxCheck /> Great Value
+                </span>
+              )}
+              {v.carfax_badge_one_owner && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface px-2 py-0.5 text-[11px] font-semibold text-text-secondary">
+                  <CarfaxCheck /> 1-Owner
+                </span>
+              )}
+            </div>
+          )}
+          <a
+            href={v.carfax_report_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            aria-label={`Show me the Carfax for ${title} (opens in a new tab)`}
+            className="inline-block overflow-hidden rounded-md shadow-sm shadow-black/25 ring-1 ring-black/10 transition-transform duration-200 hover:-translate-y-0.5"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/showmethecarfax.jpg"
+              alt="Show me the Carfax"
+              width={156}
+              height={56}
+              className="block h-8 w-auto"
+              loading="lazy"
+            />
+          </a>
+        </div>
 
         {/* CTAs */}
         <div className="mt-4 flex gap-2 pt-2">
