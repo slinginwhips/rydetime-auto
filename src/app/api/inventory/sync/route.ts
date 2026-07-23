@@ -4,8 +4,13 @@ import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import { getInventoryProvider } from "@/lib/inventoryProvider";
 import { sendNotification } from "@/lib/notificationProvider";
 import { generateVehicleSlug } from "@/lib/vehicleSlug";
+import { isAIConfigured } from "@/lib/ai";
+import { generateAndSaveVehicleDescription } from "@/lib/aiVehicleDescription";
 import type { DCVehicle, SyncSummary } from "@/types/dealercenter";
-import type { VehicleStatus } from "@/types/vehicle";
+import type { Vehicle, VehicleStatus } from "@/types/vehicle";
+
+/** Max descriptions to auto-generate per sync run (keeps well under maxDuration). */
+const DESCRIPTION_BACKFILL_LIMIT = 15;
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -243,6 +248,27 @@ async function runSync(req: NextRequest): Promise<NextResponse> {
           summary.errors.push(`Failed to mark sold vehicles — ${soldErr.message}`);
         } else {
           summary.sold = missing.length;
+        }
+      }
+    }
+
+    // Auto-write AI descriptions for cars that still don't have one — new
+    // arrivals from this feed, or any never generated. Best-effort and capped
+    // so it can't blow the serverless time budget; the next run picks up the
+    // rest. A generation failure is logged, never fails the sync.
+    if (isAIConfigured()) {
+      const { data: needDesc, error: needErr } = await supabase
+        .from("vehicles")
+        .select("*, vehicle_features(*)")
+        .in("status", ["active", "fresh_arrival"])
+        .is("description_ai", null)
+        .limit(DESCRIPTION_BACKFILL_LIMIT);
+      if (needErr) {
+        console.error("[inventory/sync] description backfill query failed:", needErr.message);
+      } else {
+        for (const v of (needDesc ?? []) as Vehicle[]) {
+          const res = await generateAndSaveVehicleDescription(v);
+          if (!res.ok) console.warn(`[inventory/sync] description gen skipped for ${v.vin}: ${res.error}`);
         }
       }
     }
