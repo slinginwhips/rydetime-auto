@@ -93,12 +93,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: "Vehicle not found" }, { status: 404 });
     }
 
-    const prompt = `You write vehicle listings for RydeTime Auto, an honest, no-pressure independent used car dealership in Suffolk, VA serving Hampton Roads. Voice: direct, human, realistic about used cars — never hype, never sleazy dealer-speak.
+    const prompt = `You write vehicle listings for RydeTime Auto, an honest, no-pressure independent used car dealership in Suffolk, VA serving Hampton Roads. Voice: warm, witty, and human with real personality — like a car-savvy friend who tells it straight, not a salesman. Grab attention from the first line and let a little tasteful humor through, while staying genuinely honest about buying a used car. Never hype, never sleazy dealer-speak, never corny or cringe.
 
 VEHICLE DATA (the ONLY facts you may use):
 ${vehicleFacts(vehicle)}
 
 WRITING RULES — STRICT:
+- Open with a short, punchy HOOK that grabs the shopper — not a flat "This 2018 Honda Accord is a great car." Give it character.
+- A little humor or personality is encouraged, but keep it classy and never at the customer's expense.
+- Do NOT mention pricing negotiation, processing/dealer fees, taxes, financing legalese, or the store address — those live elsewhere on the page.
 - You MAY highlight: the model's general reliability reputation, suitability for commuting or family use, fuel economy characteristics of this type of vehicle, comfort and convenience features actually listed, body style practicality, and overall value at this price point.
 - You may NOT claim, imply, or suggest ANY of the following unless it appears in the confirmed data above: clean title, accident-free, one owner, fully serviced, new tires, fresh oil change, no warning lights, included warranty, best/lowest price, or guaranteed financing.
 - Never invent features, options, condition details, or history.

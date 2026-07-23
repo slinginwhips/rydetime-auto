@@ -32,6 +32,20 @@ interface VDPActionsProps {
 export default function VDPActions({ vehicle }: VDPActionsProps) {
   const [testDriveOpen, setTestDriveOpen] = useState(false);
   const [holdOpen, setHoldOpen] = useState(false);
+  const [copied, setCopied] = useState<null | "call" | "text">(null);
+
+  // On phones, let tel:/sms: dial/text natively. On desktop those links pop an
+  // annoying "choose an app" dialog, so instead copy the number to the clipboard.
+  function handleContact(e: React.MouseEvent, kind: "call" | "text") {
+    const isTouch =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(pointer: coarse)").matches;
+    if (isTouch) return; // native dial/text
+    e.preventDefault();
+    navigator.clipboard?.writeText(DEALERSHIP.phone).catch(() => {});
+    setCopied(kind);
+    window.setTimeout(() => setCopied((c) => (c === kind ? null : c)), 2000);
+  }
 
   return (
     <div className="space-y-2.5">
@@ -74,15 +88,17 @@ export default function VDPActions({ vehicle }: VDPActionsProps) {
       <div className="grid grid-cols-2 gap-2.5 pt-1">
         <a
           href={DEALERSHIP.phoneHref}
+          onClick={(e) => handleContact(e, "call")}
           className="rounded-md border border-border-subtle px-4 py-3 text-center text-sm font-medium text-text-primary transition-colors hover:border-accent"
         >
-          Call Us
+          {copied === "call" ? "Number copied!" : "Call Us"}
         </a>
         <a
           href={DEALERSHIP.smsHref}
+          onClick={(e) => handleContact(e, "text")}
           className="rounded-md border border-border-subtle px-4 py-3 text-center text-sm font-medium text-text-primary transition-colors hover:border-accent"
         >
-          Text Us
+          {copied === "text" ? "Number copied!" : "Text Us"}
         </a>
       </div>
 

@@ -195,20 +195,22 @@ export default function AboutPage() {
             {DEALERSHIP.address.full} — easy to reach from anywhere in Hampton
             Roads via Route 58.
           </p>
-          <div className="mt-8 flex aspect-[16/7] items-center justify-center rounded-lg border border-border-subtle bg-background-card">
-            <div className="text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-surface text-xl">
-                📍
-              </div>
-              <p className="mt-3 text-sm font-semibold text-text-primary">
-                Serving {DEALERSHIP.serviceAreas.join(" · ")}
-              </p>
-              <p className="mt-1 text-xs uppercase tracking-widest text-text-muted">
-                Interactive service area map coming soon
+          <div className="mt-8 overflow-hidden rounded-lg border border-border-subtle bg-background-card">
+            <iframe
+              title={`RydeTime Auto — ${DEALERSHIP.address.full}`}
+              src="https://www.google.com/maps?q=1913+Holland+Road,+Suffolk,+VA+23434&output=embed"
+              className="h-64 w-full border-0 grayscale invert-[0.9] contrast-[0.9] sm:h-80"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              allowFullScreen
+            />
+            <div className="flex flex-col items-center gap-3 border-t border-border-subtle p-5 text-center sm:flex-row sm:justify-between sm:text-left">
+              <p className="text-sm font-semibold text-text-primary">
+                📍 Serving {DEALERSHIP.serviceAreas.join(" · ")}
               </p>
               <Link
                 href="/contact"
-                className="mt-4 inline-flex items-center justify-center rounded-md border border-accent px-5 py-2 text-sm font-semibold text-accent transition-colors hover:bg-accent hover:text-white"
+                className="inline-flex flex-shrink-0 items-center justify-center rounded-md border border-accent px-5 py-2 text-sm font-semibold text-accent transition-colors hover:bg-accent hover:text-white"
               >
                 Get Directions
               </Link>

@@ -32,6 +32,11 @@ export const DEALERSHIP = {
   geo: { latitude: 36.7282, longitude: -76.6105 },
 } as const;
 
+/** Dealer processing fee, surfaced as a small disclaimer (never leading the copy). */
+export const PROCESSING_FEE = 599;
+export const PROCESSING_FEE_NOTE =
+  "A $599 dealer processing fee applies to all sales. Advertised price excludes tax, title, license, and the processing fee.";
+
 export const HOW_WE_PREPARE_COPY =
   "At RydeTime Auto, we know people are buying used vehicles, not brand-new ones. Our goal is to be clear, helpful, and realistic about what we sell. Before a vehicle is offered for sale, we review it for obvious drivability, safety, and comfort concerns. When we notice issues such as warning lights, window problems, A/C concerns, radio problems, or other visible problems, we work to address them before sale. Every vehicle is sent through Virginia state inspection. Many vehicles may receive an oil change or additional maintenance depending on recent service history, timing, and vehicle condition. Because every used vehicle is different, we encourage customers to review the Carfax when available, ask questions, inspect the vehicle, take a test drive, and make sure the vehicle feels right for their needs.";
 

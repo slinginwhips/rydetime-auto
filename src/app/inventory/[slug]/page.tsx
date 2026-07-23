@@ -22,8 +22,10 @@ import {
 import {
   HOW_WE_PREPARE_COPY,
   PAYMENT_DISCLAIMER,
+  PROCESSING_FEE_NOTE,
   VEHICLE_INFO_DISCLAIMER,
 } from "@/lib/dealership";
+import { resolveVehicleDescription } from "@/lib/text";
 
 export const dynamic = "force-dynamic";
 
@@ -74,7 +76,7 @@ export default async function VehicleDetailPage({ params }: VDPProps) {
     featureGroups.get(cat)!.push(f.feature_name);
   }
 
-  const description = vehicle.description_ai || vehicle.description_dc;
+  const description = resolveVehicleDescription(vehicle.description_ai, vehicle.description_dc);
   const photos = vehicle.vehicle_photos ?? [];
   const badges = vehicle.vehicle_prep_badges ?? [];
 
@@ -231,6 +233,9 @@ export default async function VehicleDetailPage({ params }: VDPProps) {
                 </div>
               </Reveal>
             )}
+
+            {/* Processing fee — small print, deliberately not leading the copy */}
+            <p className="text-xs text-text-muted">{PROCESSING_FEE_NOTE}</p>
 
             {/* Ryan's Take */}
             {vehicle.ryans_take && (
