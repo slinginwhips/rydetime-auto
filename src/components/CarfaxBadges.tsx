@@ -30,9 +30,9 @@ export default function CarfaxBadges({
   className = "",
 }: CarfaxBadgesProps) {
   const badges: BadgeDef[] = [];
-  if (greatValue) badges.push({ label: "CARFAX Great Value", highlight: true });
-  if (goodValue) badges.push({ label: "CARFAX Good Value", highlight: true });
-  if (oneOwner) badges.push({ label: "CARFAX 1-Owner" });
+  if (greatValue) badges.push({ label: "Great Value", highlight: true });
+  if (goodValue) badges.push({ label: "Good Value", highlight: true });
+  if (oneOwner) badges.push({ label: "One Owner" });
   if (accidentFree) badges.push({ label: "No Accidents Reported" });
   if (serviceRecords) badges.push({ label: "Service History" });
 

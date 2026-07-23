@@ -83,6 +83,15 @@ export default function VehicleCard({ vehicle: v }: VehicleCardProps) {
               Ryan&apos;s Pick
             </span>
           )}
+          {v.carfax_badge_one_owner && (
+            <span className="inline-flex items-center gap-1 rounded bg-emerald-600 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-sm shadow-black/40">
+              {/* single-owner mark (our own badge — no Carfax branding) */}
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 2c-5 0-9 2.5-9 6v1h18v-1c0-3.5-4-6-9-6Z" />
+              </svg>
+              One Owner
+            </span>
+          )}
         </div>
       </Link>
 
@@ -116,7 +125,8 @@ export default function VehicleCard({ vehicle: v }: VehicleCardProps) {
 
         {/* Carfax: trust badges (the ones this car qualifies for) + report button */}
         <div className="mt-3 space-y-2">
-          {(v.carfax_badge_great_value || v.carfax_badge_good_value || v.carfax_badge_one_owner) && (
+          {/* One-Owner shows as its own badge on the photo above; value badges show here. */}
+          {(v.carfax_badge_great_value || v.carfax_badge_good_value) && (
             <div className="flex flex-wrap gap-1.5">
               {v.carfax_badge_great_value && (
                 <span className="inline-flex items-center gap-1 rounded-full border border-[#F47B20]/40 bg-[#F47B20]/10 px-2 py-0.5 text-[11px] font-semibold text-[#F9A05B]">
@@ -126,11 +136,6 @@ export default function VehicleCard({ vehicle: v }: VehicleCardProps) {
               {v.carfax_badge_good_value && (
                 <span className="inline-flex items-center gap-1 rounded-full border border-[#F47B20]/40 bg-[#F47B20]/10 px-2 py-0.5 text-[11px] font-semibold text-[#F9A05B]">
                   <CarfaxCheck /> Good Value
-                </span>
-              )}
-              {v.carfax_badge_one_owner && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface px-2 py-0.5 text-[11px] font-semibold text-text-secondary">
-                  <CarfaxCheck /> 1-Owner
                 </span>
               )}
             </div>
