@@ -51,8 +51,17 @@ function parseInline(text: string, keyPrefix: string): React.ReactNode[] {
   return nodes;
 }
 
+/**
+ * Models like to wrap a URL in backticks. Inline code is matched before links,
+ * so `[Apply](/credit-application)` rendered as literal unclickable text — the
+ * exact thing a customer needs to click. Unwrap it before parsing.
+ */
+function unwrapCodeLinks(text: string): string {
+  return text.replace(/`(\[[^\]]+\]\([^)\s]+\))`/g, "$1");
+}
+
 function ChatMarkdown({ text }: { text: string }) {
-  const lines = text.split("\n");
+  const lines = unwrapCodeLinks(text).split("\n");
   const blocks: React.ReactNode[] = [];
   let i = 0;
   let key = 0;

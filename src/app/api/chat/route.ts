@@ -9,6 +9,7 @@ import {
   retrieveKnowledge,
 } from "@/lib/chatRetrieval";
 import { getLeadProvider } from "@/lib/leadProvider";
+import { extractContact, PHONE_RE, EMAIL_RE } from "@/lib/chatContact";
 import { sendNotification } from "@/lib/notificationProvider";
 import { DEALERSHIP } from "@/lib/dealership";
 import type { DCLead } from "@/types/dealercenter";
@@ -43,7 +44,7 @@ STRICT RULES:
 
 COLLECTING FINANCING / CREDIT-APP INFO:
 When a customer asks about financing or a credit application, your only job is to collect their name, phone number, email, and vehicle of interest, then send them the secure credit application link. Do NOT bring up "buy here pay here" in this flow — that topic only comes up if the customer specifically asks about it (see below). Never collect SSN, date of birth, income, or sensitive financial data in chat. Use wording like: "I can get the process started — what's your name, best phone number, email, and which vehicle interests you? Once I have that I'll send you our secure credit application link."
-The secure credit application lives at /credit-application — direct customers there to complete it once you've collected their basic contact info. When a customer provides their name, phone, email, or vehicle of interest in chat, that information is automatically saved for the dealership and the team is notified, so reassure them a real person will follow up.
+The secure credit application lives at /credit-application. Write that link EXACTLY as [Start your secure credit application](/credit-application) — never wrap a link in backticks or code formatting, and never paste a bare URL, because those do not render as something the customer can click. Direct customers there to complete it once you've collected their basic contact info. When a customer provides their name, phone, email, or vehicle of interest in chat, that information is automatically saved for the dealership and the team is notified, so reassure them a real person will follow up.
 
 BUY HERE PAY HERE — ONLY IF THE CUSTOMER ASKS:
 Never raise "buy here pay here" on your own — not when someone asks about financing, the credit app, approvals, or bad credit. Only if a customer specifically asks whether RydeTime is a buy here pay here (BHPH) lot, or asks about in-house financing, explain briefly: RydeTime Auto is not a buy here pay here dealership, and we can usually get most people approved without it — including first-time buyers and folks rebuilding their credit. Then give a short, plain reason why a real lender approval beats a BHPH deal: typically lower interest rates, the loan reports to the credit bureaus so it actually helps build your credit, and you pay a real bank or finance company instead of making in-house payments to the lot. Keep it short and reassuring — a helpful answer, not a sales pitch.
@@ -163,8 +164,6 @@ async function buildContext(
 
 /* ---------------- Lead trigger detection ---------------- */
 
-const PHONE_RE = /(\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/;
-const EMAIL_RE = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
 const KEYWORD_RE =
   /\b(test\s*drive|financ|payment|trade[\s-]*in|trade\b|carfax|hold\b|deposit|available|availability|talk to ryan|speak (to|with) ryan|appointment|pre[\s-]*approv|approved?)\b/i;
 
@@ -182,56 +181,99 @@ function captureChatLead(
     try {
       const lastUser = [...messages].reverse().find((m) => m.role === "user");
       if (!lastUser) return;
-      const phone = lastUser.content.match(PHONE_RE)?.[0];
-      const email = lastUser.content.match(EMAIL_RE)?.[0];
+      const { phone, email, firstName, lastName } = extractContact(messages);
       const recent = messages
         .slice(-6)
         .map((m) => `${m.role === "user" ? "Customer" : "AI"}: ${m.content}`)
         .join("\n");
 
       let leadId: string | null = null;
+      // Only worth a notification once somebody can actually be called back.
+      // The trigger fires on the opening "I'd like to get pre-approved", which
+      // carries no contact details at all.
+      let reachableNow = Boolean(phone || email);
+
       if (isSupabaseConfigured() && process.env.SUPABASE_SERVICE_ROLE_KEY) {
         const supabase = getSupabaseAdmin();
 
-        // De-dupe: at most one chat lead per session per 10 minutes.
-        const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-        const { data: recentLeads } = await supabase
+        // One lead per session — but it gets FILLED IN as the conversation goes
+        // on. This used to return here, which threw away the message carrying
+        // the name, phone and email, because the trigger had already fired on
+        // the contactless opener.
+        const { data: existingRows } = await supabase
           .from("leads")
-          .select("id")
+          .select("id, first_name, last_name, email, phone")
           .eq("lead_type", "chat")
           .eq("source_url", `chat:${sessionToken}`)
-          .gte("created_at", tenMinAgo)
+          .order("created_at", { ascending: false })
           .limit(1);
-        if (recentLeads && recentLeads.length > 0) return;
+        const existing = existingRows?.[0] as
+          | { id: string; first_name: string | null; last_name: string | null; email: string | null; phone: string | null }
+          | undefined;
 
-        const { data: lead } = await supabase
-          .from("leads")
-          .insert({
-            first_name: "Chat Visitor",
-            last_name: null,
-            email: email ?? null,
-            phone: phone ?? null,
-            vehicle_id: vehicle?.id ?? null,
-            vin: vehicle?.vin ?? null,
-            stock_number: vehicle?.stock_number ?? null,
-            message: lastUser.content.slice(0, 2000),
-            lead_type: "chat",
+        if (existing) {
+          const wasReachable = Boolean(existing.email || existing.phone);
+          const patch: Record<string, string> = {
             chat_summary: recent.slice(0, 9000),
-            source_url: `chat:${sessionToken}`,
-            dc_pushed: false,
-          })
-          .select("id")
-          .single();
-        leadId = (lead as { id: string } | null)?.id ?? null;
-        if (leadId) {
-          await supabase.from("lead_events").insert({ lead_id: leadId, event_type: "created", notes: "auto-created from chat trigger" });
+            message: lastUser.content.slice(0, 2000),
+          };
+          if (email && !existing.email) patch.email = email;
+          if (phone && !existing.phone) patch.phone = phone;
+          if (firstName && (!existing.first_name || existing.first_name === "Chat Visitor")) {
+            patch.first_name = firstName;
+            if (lastName) patch.last_name = lastName;
+          }
+
+          const { error: updateError } = await supabase.from("leads").update(patch).eq("id", existing.id);
+          if (updateError) console.error("[api/chat] lead update failed:", updateError.message);
+
+          leadId = existing.id;
+          // Tell Ryan once — when an anonymous chat turns into a real person.
+          reachableNow = Boolean(phone || email) && !wasReachable;
+          if (!reachableNow) return;
+          await supabase.from("lead_events").insert({
+            lead_id: leadId,
+            event_type: "updated",
+            notes: "contact details captured from chat",
+          });
+        } else {
+          const { data: lead, error: insertError } = await supabase
+            .from("leads")
+            .insert({
+              first_name: firstName ?? "Chat Visitor",
+              last_name: lastName,
+              email,
+              phone,
+              vehicle_id: vehicle?.id ?? null,
+              vin: vehicle?.vin ?? null,
+              stock_number: vehicle?.stock_number ?? null,
+              message: lastUser.content.slice(0, 2000),
+              lead_type: "chat",
+              chat_summary: recent.slice(0, 9000),
+              source_url: `chat:${sessionToken}`,
+              dc_pushed: false,
+            })
+            .select("id")
+            .single();
+          // Silently discarding this is how a lead disappears with the
+          // notification email still going out, looking like nothing happened.
+          if (insertError) console.error("[api/chat] lead insert failed:", insertError.message);
+          leadId = (lead as { id: string } | null)?.id ?? null;
+          if (leadId) {
+            await supabase.from("lead_events").insert({ lead_id: leadId, event_type: "created", notes: "auto-created from chat trigger" });
+          }
         }
       }
 
+      // An anonymous buying signal is worth filing, not worth a push or an
+      // email — neither Ryan nor DealerCenter can do anything with it.
+      if (!reachableNow) return;
+
       const dcLead: DCLead = {
-        first_name: "Chat Visitor",
-        email,
-        phone,
+        first_name: firstName ?? "Chat Visitor",
+        last_name: lastName ?? undefined,
+        email: email ?? undefined,
+        phone: phone ?? undefined,
         comments: `AI chat lead (auto-detected buying signal).\n\nRecent transcript:\n${recent}`,
         vin: vehicle?.vin,
         stock_number: vehicle?.stock_number,
@@ -254,9 +296,12 @@ function captureChatLead(
       }
 
       await sendNotification({
-        subject: `Hot chat lead${vehicle ? `: ${vehicle.year} ${vehicle.make} ${vehicle.model}` : ""}`,
+        subject: `Hot chat lead${firstName ? `: ${firstName}${lastName ? ` ${lastName}` : ""}` : ""}${
+          vehicle ? ` — ${vehicle.year} ${vehicle.make} ${vehicle.model}` : ""
+        }`,
         body: [
           "The AI concierge detected a buying signal in a live chat.",
+          firstName ? `Name: ${firstName}${lastName ? ` ${lastName}` : ""}` : null,
           phone ? `Phone: ${phone}` : null,
           email ? `Email: ${email}` : null,
           vehicle ? `Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model} (stock ${vehicle.stock_number})` : null,

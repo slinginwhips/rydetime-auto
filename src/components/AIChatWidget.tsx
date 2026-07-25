@@ -324,7 +324,21 @@ export default function AIChatWidget() {
                   >
                     {m.content ? (
                       m.role === "assistant" ? (
-                        <ChatMarkdown text={m.content} />
+                        <>
+                          <ChatMarkdown text={m.content} />
+                          {/* The one link that has to work. Never rely on the
+                              model emitting clean markdown for it — if the reply
+                              mentions the credit application, give the customer
+                              a real button. */}
+                          {m.content.includes("/credit-application") && (
+                            <a
+                              href="/credit-application"
+                              className="mt-2 inline-flex items-center justify-center rounded-full bg-accent px-4 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                            >
+                              Start your secure credit application
+                            </a>
+                          )}
+                        </>
                       ) : (
                         m.content
                       )
