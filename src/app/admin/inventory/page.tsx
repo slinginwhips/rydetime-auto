@@ -1,5 +1,6 @@
 import Link from "next/link";
 import SupabaseNotice from "../_components/SupabaseNotice";
+import SoldToggle from "../_components/SoldToggle";
 import { safeQuery } from "../_lib/adminData";
 import type { Vehicle } from "@/types/vehicle";
 
@@ -19,8 +20,10 @@ export default async function AdminInventoryPage() {
     <div>
       <h1 className="text-2xl font-bold text-text-primary">Inventory</h1>
       <p className="mt-1 text-sm text-text-secondary">
-        All vehicles, any status. Vehicle data syncs from DealerCenter — use
-        the editor for website-only overrides.
+        All vehicles, any status. Vehicle data syncs from DealerCenter once a
+        day, so a car you just sold stays listed until tomorrow morning — hit{" "}
+        <strong className="text-text-primary">Mark sold</strong> to pull it off
+        the website right now. The change sticks through the next sync.
       </p>
 
       <div className="mt-6">
@@ -106,13 +109,20 @@ export default async function AdminInventoryPage() {
                   <td className="tabular px-4 py-3 text-text-secondary">
                     {v.days_in_inventory}
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/admin/inventory/${v.id}`}
-                      className="text-xs font-semibold text-accent hover:underline"
-                    >
-                      Edit →
-                    </Link>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-3">
+                      <SoldToggle
+                        vehicleId={v.id}
+                        status={v.status}
+                        label={`${v.year} ${v.make} ${v.model}`}
+                      />
+                      <Link
+                        href={`/admin/inventory/${v.id}`}
+                        className="text-xs font-semibold text-accent hover:underline"
+                      >
+                        Edit →
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               );

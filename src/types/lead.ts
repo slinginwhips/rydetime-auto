@@ -166,8 +166,26 @@ export interface HoldDepositSubmission {
 
 export const HOLD_DEPOSIT_AMOUNT = 500;
 
-export const HOLD_POLICY_TEXT =
-  "The $500 hold deposit is non-refundable if you choose not to move forward with the purchase. The deposit applies toward your purchase price if the sale is completed. Holding this vehicle removes it from active availability and RydeTime Auto may turn away other buyers during the hold period. This deposit does not guarantee financing approval, lender terms, insurance eligibility, or final sale. Final sale requires completed paperwork, full payment or lender approval, and dealership confirmation.";
+/** Calendar days one $500 deposit holds a vehicle for, once confirmed. */
+export const HOLD_PERIOD_DAYS = 7;
+
+/**
+ * Hold deposit terms.
+ *
+ * Two things this text has to do, both of them protect the dealership:
+ * 1. A submitted form is a REQUEST, not a hold. Nothing is held until RydeTime
+ *    confirms it directly — otherwise someone could drop $500 on a car that is
+ *    already being written up for another customer and claim it out from under
+ *    them.
+ * 2. One deposit buys one week, not forever. Extensions cost another $500 per
+ *    week, and any deviation has to be in writing.
+ * Keep both of those in any future rewrite.
+ */
+export const HOLD_POLICY_TEXT = [
+  `Submitting this form is a REQUEST to hold a vehicle. It does not place a hold by itself. A hold takes effect only after RydeTime Auto confirms it with you directly and the $${HOLD_DEPOSIT_AMOUNT} deposit has been received. Until you have that confirmation from the dealership, the vehicle stays available to any buyer, and RydeTime Auto may decline a hold request for any reason — including when the vehicle is already part of a pending deal with another customer. A declined request is refunded in full.`,
+  `Once confirmed, the $${HOLD_DEPOSIT_AMOUNT} deposit holds the vehicle for ${HOLD_PERIOD_DAYS} calendar days from the date of confirmation. To hold it longer, an additional $${HOLD_DEPOSIT_AMOUNT} is due for each additional ${HOLD_PERIOD_DAYS}-day period. Any other hold length, amount, or extension must be agreed with RydeTime Auto in writing — nothing agreed verbally changes these terms. If a hold period ends and no extension has been paid and confirmed, the hold expires automatically and the vehicle returns to active availability.`,
+  `The deposit is non-refundable if you choose not to move forward with the purchase, and applies toward your purchase price if the sale is completed. Holding a vehicle removes it from active availability and RydeTime Auto may turn away other buyers during the hold period. This deposit does not guarantee financing approval, lender terms, insurance eligibility, or final sale. Final sale requires completed paperwork, full payment or lender approval, and dealership confirmation.`,
+].join("\n\n");
 
 // ---------------------------------------------------------------------------
 // Credit application

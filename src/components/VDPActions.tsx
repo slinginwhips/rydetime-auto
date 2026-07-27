@@ -68,7 +68,7 @@ export default function VDPActions({ vehicle }: VDPActionsProps) {
           onClick={() => setHoldOpen(true)}
           className="w-full rounded-md border border-border-subtle px-4 py-3 text-sm font-semibold text-text-primary transition-colors hover:border-accent"
         >
-          Hold This Vehicle
+          Request a Hold
         </button>
       )}
       <Link

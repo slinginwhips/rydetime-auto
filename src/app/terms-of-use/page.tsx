@@ -1,6 +1,6 @@
 import { generatePageMetadata } from "@/lib/seo";
 import { DEALERSHIP, FOOTER_DISCLAIMER } from "@/lib/dealership";
-import { HOLD_POLICY_TEXT } from "@/types/lead";
+import { HOLD_POLICY_TEXT, HOLD_PERIOD_DAYS } from "@/types/lead";
 
 export const metadata = generatePageMetadata({
   title: "Terms of Use | RydeTime Auto — Suffolk, VA",
@@ -80,11 +80,14 @@ export default function TermsOfUsePage() {
         <div>
           <h2>Vehicle Hold Deposits</h2>
           <p className="mt-2">
-            Customers may place a $500 deposit to hold a vehicle, processed
-            securely through Stripe. The hold policy, which you must
-            acknowledge before paying, is as follows:
+            Customers may request a hold on a vehicle with a $500 deposit,
+            processed securely through Stripe. A request is not a hold — the
+            hold begins only when RydeTime Auto confirms it. One deposit holds
+            a vehicle for {HOLD_PERIOD_DAYS} days; each additional{" "}
+            {HOLD_PERIOD_DAYS}-day period costs another $500. The full policy,
+            which you must acknowledge before paying, is as follows:
           </p>
-          <p className="mt-2 rounded-md border border-border-subtle bg-background-card p-4 italic">
+          <p className="mt-2 whitespace-pre-line rounded-md border border-border-subtle bg-background-card p-4 italic">
             {HOLD_POLICY_TEXT}
           </p>
           <p className="mt-2">

@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { HOLD_POLICY_TEXT, HOLD_DEPOSIT_AMOUNT, type HoldDepositSubmission } from "@/types/lead";
+import {
+  HOLD_POLICY_TEXT,
+  HOLD_DEPOSIT_AMOUNT,
+  HOLD_PERIOD_DAYS,
+  type HoldDepositSubmission,
+} from "@/types/lead";
 import { DEALERSHIP } from "@/lib/dealership";
 
 interface HoldVehicleFlowProps {
@@ -147,8 +152,9 @@ export default function HoldVehicleFlow({ vehicle, open, onClose }: HoldVehicleF
         {step === 1 && (
           <div className="mt-5">
             <p className="text-sm text-text-secondary">
-              A ${HOLD_DEPOSIT_AMOUNT} deposit holds this vehicle while you finish financing or
-              arrange your visit. Start with your contact info.
+              A ${HOLD_DEPOSIT_AMOUNT} deposit holds this vehicle for {HOLD_PERIOD_DAYS} days while
+              you finish financing or arrange your visit. We&apos;ll confirm the hold with you
+              before it starts. Start with your contact info.
             </p>
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <input type="text" placeholder="First name *" aria-label="First name" autoComplete="given-name" className={inputClass} value={firstName} onChange={(e) => setFirstName(e.target.value)} />
@@ -176,7 +182,7 @@ export default function HoldVehicleFlow({ vehicle, open, onClose }: HoldVehicleF
             <div
               ref={policyRef}
               onScroll={onPolicyScroll}
-              className="mt-3 max-h-44 overflow-y-auto rounded-md border border-border-subtle bg-surface p-4 text-sm leading-relaxed text-text-secondary"
+              className="mt-3 max-h-56 space-y-3 overflow-y-auto whitespace-pre-line rounded-md border border-border-subtle bg-surface p-4 text-sm leading-relaxed text-text-secondary"
               tabIndex={0}
             >
               {HOLD_POLICY_TEXT}
@@ -211,9 +217,12 @@ export default function HoldVehicleFlow({ vehicle, open, onClose }: HoldVehicleF
                 className="mt-0.5 h-4 w-4 accent-[#CC0000]"
               />
               <span className="text-sm leading-relaxed text-text-secondary">
-                I have read and agree to the hold deposit policy, including that the $
-                {HOLD_DEPOSIT_AMOUNT} deposit is non-refundable if I choose not to move forward
-                with the purchase.
+                I have read and agree to the hold deposit policy. I understand that this is a
+                request, that no hold exists until RydeTime Auto confirms it with me, that the $
+                {HOLD_DEPOSIT_AMOUNT} deposit holds the vehicle for {HOLD_PERIOD_DAYS} days and
+                each additional {HOLD_PERIOD_DAYS} days costs another ${HOLD_DEPOSIT_AMOUNT}{" "}
+                unless we agree otherwise in writing, and that the deposit is non-refundable if I
+                choose not to move forward with the purchase.
               </span>
             </label>
             <div className="mt-4">
@@ -281,7 +290,7 @@ export default function HoldVehicleFlow({ vehicle, open, onClose }: HoldVehicleF
                 onClick={submit}
                 className="flex-1 rounded-md bg-accent px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {submitting ? "Placing Hold…" : `Place $${HOLD_DEPOSIT_AMOUNT} Hold`}
+                {submitting ? "Sending Request…" : `Request Hold — $${HOLD_DEPOSIT_AMOUNT}`}
               </button>
             </div>
           </div>
@@ -296,8 +305,9 @@ export default function HoldVehicleFlow({ vehicle, open, onClose }: HoldVehicleF
             </svg>
             <h3 className="mt-3 text-xl font-semibold text-text-primary">Hold request submitted</h3>
             <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-text-secondary">
-              Your hold on the {vehicle.label} is pending dealership confirmation. We&apos;ll
-              reach out shortly to confirm and walk you through next steps. Questions? Call{" "}
+              Your request on the {vehicle.label} is pending dealership confirmation — the{" "}
+              {HOLD_PERIOD_DAYS}-day hold starts once we confirm it with you, and the vehicle
+              stays available until then. We&apos;ll reach out shortly. Questions? Call{" "}
               <a href={DEALERSHIP.phoneHref} className="font-medium text-text-primary">
                 {DEALERSHIP.phone}
               </a>

@@ -96,6 +96,8 @@ export default function VehicleGallery({ photos, alt }: VehicleGalleryProps) {
                 className="object-cover"
                 priority={i === 0}
                 loading={i === 0 ? "eager" : "lazy"}
+                // Served pre-sized from DealerCenter's CDN — see docs/IMAGES.md.
+                unoptimized
               />
             </button>
           ))}
@@ -149,6 +151,7 @@ export default function VehicleGallery({ photos, alt }: VehicleGalleryProps) {
                 sizes="96px"
                 className="object-cover"
                 loading="lazy"
+                unoptimized
               />
             </button>
           ))}
@@ -182,6 +185,7 @@ export default function VehicleGallery({ photos, alt }: VehicleGalleryProps) {
               fill
               sizes="92vw"
               className="object-contain"
+              unoptimized
             />
           </div>
           {count > 1 && (

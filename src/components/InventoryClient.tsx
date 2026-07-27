@@ -303,6 +303,61 @@ export default function InventoryClient({
     </div>
   );
 
+  // Rendered both above and below the grid, so nobody has to scroll to the
+  // bottom of a 12-card page just to reach page 2.
+  const pagination = (position: "top" | "bottom") =>
+    totalPages > 1 ? (
+      <nav
+        className={`flex flex-wrap items-center justify-center gap-2 ${
+          position === "top" ? "mb-6" : "mt-10"
+        }`}
+        aria-label={`Inventory pagination (${position} of results)`}
+      >
+        <button
+          type="button"
+          disabled={page <= 1 || isPending}
+          onClick={() => goToPage(page - 1)}
+          className="rounded-md border border-border-subtle px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:border-accent disabled:cursor-not-allowed disabled:opacity-40"
+          aria-label="Previous page"
+        >
+          Prev
+        </button>
+
+        {buildPageList(page, totalPages).map((p, i) =>
+          p === "…" ? (
+            <span key={`gap-${i}`} className="px-2 text-sm text-text-muted" aria-hidden="true">
+              …
+            </span>
+          ) : (
+            <button
+              key={p}
+              type="button"
+              disabled={isPending}
+              onClick={() => goToPage(p)}
+              aria-current={p === page ? "page" : undefined}
+              className={`min-w-[2.5rem] rounded-md border px-3 py-2 text-sm font-semibold transition-colors ${
+                p === page
+                  ? "border-accent bg-accent text-white"
+                  : "border-border-subtle text-text-primary hover:border-accent"
+              }`}
+            >
+              {p}
+            </button>
+          )
+        )}
+
+        <button
+          type="button"
+          disabled={page >= totalPages || isPending}
+          onClick={() => goToPage(page + 1)}
+          className="rounded-md border border-border-subtle px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:border-accent disabled:cursor-not-allowed disabled:opacity-40"
+          aria-label="Next page"
+        >
+          Next
+        </button>
+      </nav>
+    ) : null;
+
   return (
     <div>
       {/* Scroll anchor for pagination (offset for any sticky header) */}
@@ -366,6 +421,7 @@ export default function InventoryClient({
         <div className="min-w-0 flex-1">
           {vehicles.length > 0 ? (
             <>
+              {pagination("top")}
               <div className={`grid grid-cols-1 gap-5 transition-opacity duration-300 sm:grid-cols-2 xl:grid-cols-3 ${isPending ? "opacity-60" : "opacity-100"}`}>
                 {vehicles.map((v, i) => (
                   <Reveal key={`${filterEpoch}-${v.id}`} variant="up" delay={(i % 12) * 60}>
@@ -373,55 +429,7 @@ export default function InventoryClient({
                   </Reveal>
                 ))}
               </div>
-              {totalPages > 1 && (
-                <nav
-                  className="mt-10 flex flex-wrap items-center justify-center gap-2"
-                  aria-label="Inventory pagination"
-                >
-                  <button
-                    type="button"
-                    disabled={page <= 1 || isPending}
-                    onClick={() => goToPage(page - 1)}
-                    className="rounded-md border border-border-subtle px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:border-accent disabled:cursor-not-allowed disabled:opacity-40"
-                    aria-label="Previous page"
-                  >
-                    Prev
-                  </button>
-
-                  {buildPageList(page, totalPages).map((p, i) =>
-                    p === "…" ? (
-                      <span key={`gap-${i}`} className="px-2 text-sm text-text-muted" aria-hidden="true">
-                        …
-                      </span>
-                    ) : (
-                      <button
-                        key={p}
-                        type="button"
-                        disabled={isPending}
-                        onClick={() => goToPage(p)}
-                        aria-current={p === page ? "page" : undefined}
-                        className={`min-w-[2.5rem] rounded-md border px-3 py-2 text-sm font-semibold transition-colors ${
-                          p === page
-                            ? "border-accent bg-accent text-white"
-                            : "border-border-subtle text-text-primary hover:border-accent"
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    )
-                  )}
-
-                  <button
-                    type="button"
-                    disabled={page >= totalPages || isPending}
-                    onClick={() => goToPage(page + 1)}
-                    className="rounded-md border border-border-subtle px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:border-accent disabled:cursor-not-allowed disabled:opacity-40"
-                    aria-label="Next page"
-                  >
-                    Next
-                  </button>
-                </nav>
-              )}
+              {pagination("bottom")}
             </>
           ) : (
             <div className="rounded-lg border border-border-subtle bg-background-card p-10 text-center">

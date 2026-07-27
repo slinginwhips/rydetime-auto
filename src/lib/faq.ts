@@ -28,7 +28,7 @@ export const FAQS: FaqEntry[] = [
   {
     question: "How do I hold a vehicle?",
     answer:
-      "You can place a $500 hold deposit on a vehicle through its listing page or by contacting us. The deposit takes the vehicle off active availability while you finalize financing or arrange to come in. Important: the deposit is non-refundable if you choose not to move forward, but it applies in full toward your purchase if the sale is completed. The dealership confirms each hold manually.",
+      "You can request a hold on a vehicle through its listing page or by contacting us. A request is not a hold: nothing is held until we confirm it with you directly, and we may decline a request — for example, when the vehicle is already part of a deal in progress with another customer. Once confirmed, a $500 deposit holds the vehicle for 7 days. Each additional 7 days is another $500, unless we agree to something different in writing. The deposit is non-refundable if you choose not to move forward, but it applies in full toward your purchase if the sale is completed.",
   },
   {
     question: "Can I get a Carfax report?",

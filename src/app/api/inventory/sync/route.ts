@@ -156,8 +156,13 @@ async function runSync(req: NextRequest): Promise<NextResponse> {
       .from("admin_overrides")
       .select("vehicle_id, field_name, override_value");
     if (overrideErr) throw overrideErr;
+    // "prep_badges" is stored as an override but lives in its own table, not on
+    // vehicles. Feeding it to a vehicles UPDATE fails the whole statement, which
+    // would silently drop every other override for that car (status included).
+    const NON_COLUMN_OVERRIDES = new Set(["prep_badges"]);
     const overridesByVehicle = new Map<string, Record<string, unknown>>();
     for (const o of (overrideData ?? []) as { vehicle_id: string; field_name: string; override_value: string }[]) {
+      if (NON_COLUMN_OVERRIDES.has(o.field_name)) continue;
       const fields = overridesByVehicle.get(o.vehicle_id) ?? {};
       fields[o.field_name] = o.override_value;
       overridesByVehicle.set(o.vehicle_id, fields);

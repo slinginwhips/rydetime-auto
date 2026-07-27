@@ -54,6 +54,12 @@ export default function VehicleCard({ vehicle: v }: VehicleCardProps) {
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             className="card-photo object-cover"
             loading="lazy"
+            // DealerCenter serves these pre-sized at 800x600 from its own CDN.
+            // Re-optimizing them on Vercel burns a transformation per photo per
+            // breakpoint — thousands of them — and the free tier stops serving
+            // NEW ones with a 402 once the quota is hit, which shows up as blank
+            // broken images on freshly added cars. See docs/IMAGES.md.
+            unoptimized
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-background-secondary">

@@ -65,6 +65,7 @@ export default function SimilarVehicles({ vehicles }: SimilarVehiclesProps) {
                   sizes="256px"
                   className="object-cover"
                   loading="lazy"
+                  unoptimized
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center">

@@ -84,10 +84,15 @@ export async function PATCH(
         field_name,
         override_value: value === null ? null : String(value),
       }));
+      // UPSERT, not insert: admin_overrides has unique (vehicle_id, field_name),
+      // so a plain insert threw a duplicate-key error on every save after the
+      // first. It was only logged, so the override silently kept the OLD value
+      // and the next DealerCenter sync re-applied it — e.g. a car marked sold
+      // by hand came straight back onto the site the next morning.
       if (overrideRows.length > 0) {
         const { error: ovErr } = await supabase
           .from("admin_overrides")
-          .insert(overrideRows);
+          .upsert(overrideRows, { onConflict: "vehicle_id,field_name" });
         if (ovErr) console.error("[admin/vehicles] override log failed:", ovErr);
       }
     }
@@ -105,11 +110,14 @@ export async function PATCH(
           .insert(prep_badges.map((badge_type) => ({ vehicle_id: id, badge_type })));
         if (insErr) throw insErr;
       }
-      const { error: ovErr } = await supabase.from("admin_overrides").insert({
-        vehicle_id: id,
-        field_name: "prep_badges",
-        override_value: prep_badges.join(","),
-      });
+      const { error: ovErr } = await supabase.from("admin_overrides").upsert(
+        {
+          vehicle_id: id,
+          field_name: "prep_badges",
+          override_value: prep_badges.join(","),
+        },
+        { onConflict: "vehicle_id,field_name" }
+      );
       if (ovErr) console.error("[admin/vehicles] badge override log failed:", ovErr);
     }
 
