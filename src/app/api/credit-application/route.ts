@@ -7,6 +7,7 @@ import {
   type CreditAppAdfContext,
 } from "@/lib/leadProvider";
 import { sendNotification } from "@/lib/notificationProvider";
+import { pushCreditAppToDms } from "@/lib/dmsCreditApp";
 import { getVehicleById } from "@/lib/vehicles";
 import type { CreditApplicationSubmission } from "@/types/lead";
 import type { Vehicle } from "@/types/vehicle";
@@ -208,7 +209,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     });
 
     // 2) Redacted credit-application record (NO full SSN — last 4 only).
-    const { error: caErr } = await supabase.from("credit_applications").insert({
+    const creditAppRow = {
       lead_id: leadId,
       first_name: app.first_name,
       middle_name: app.middle_name ?? null,
@@ -259,11 +260,37 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       signer_user_agent: req.headers.get("user-agent")?.slice(0, 400) ?? null,
       dc_pushed: dcResult.success,
       dc_pushed_at: dcResult.success ? new Date().toISOString() : null,
-    });
+    };
+
+    const { data: creditApp, error: caErr } = await supabase
+      .from("credit_applications")
+      .insert(creditAppRow)
+      .select("id, created_at, signed_at")
+      .single();
     if (caErr) {
       // The lead + DC push already succeeded; surface the audit-row failure but
       // don't fail the customer's submission.
       console.error("[api/credit-application] credit_applications insert failed:", caErr.message);
+    }
+
+    // 3) Hand the FULL application (SSN included) to the DMS, so Dealertrack's
+    //    9-digit SSN box stops being typed by hand. The row we send is the one
+    //    we just stored plus the social — same shape, same id, so the DMS's own
+    //    poller can't file a second copy of it. Nothing extra is stored here.
+    //    Best-effort: a failure leaves the poller to file it without the SSN.
+    if (creditApp) {
+      const identifiers = creditApp as { id: string; created_at: string; signed_at: string | null };
+      const dmsResult = await pushCreditAppToDms({
+        ...creditAppRow,
+        id: identifiers.id,
+        created_at: identifiers.created_at,
+        signed_at: identifiers.signed_at,
+        ssn: app.ssn || null,
+        co_ssn: app.has_co_applicant ? app.co_ssn || null : null,
+      });
+      if (dmsResult.status === "failed") {
+        console.error("[api/credit-application] DMS push failed:", dmsResult.error);
+      }
     }
 
     await notify();
