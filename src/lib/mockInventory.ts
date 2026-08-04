@@ -45,6 +45,8 @@ const base = {
   sold_at: null,
   dc_last_synced: now,
   seats: 5,
+  city_mpg: null,
+  highway_mpg: null,
   carfax_badge_great_value: false,
   carfax_badge_good_value: false,
 };

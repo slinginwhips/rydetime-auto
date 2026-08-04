@@ -21,6 +21,8 @@ export interface Vehicle {
   engine: string | null;
   doors: number | null;
   seats: number | null;
+  city_mpg: number | null;
+  highway_mpg: number | null;
   description_dc: string | null;
   description_ai: string | null;
   meta_description: string | null;

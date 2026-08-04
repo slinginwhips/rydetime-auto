@@ -6,11 +6,15 @@ import { sendNotification } from "@/lib/notificationProvider";
 import { generateVehicleSlug } from "@/lib/vehicleSlug";
 import { isAIConfigured } from "@/lib/ai";
 import { generateAndSaveVehicleDescription } from "@/lib/aiVehicleDescription";
+import { decodeVinSpecs } from "@/lib/vinSpecs";
+import { lookupMpg } from "@/lib/mpgLookup";
 import type { DCVehicle, SyncSummary } from "@/types/dealercenter";
 import type { Vehicle, VehicleStatus } from "@/types/vehicle";
 
 /** Max descriptions to auto-generate per sync run (keeps well under maxDuration). */
 const DESCRIPTION_BACKFILL_LIMIT = 15;
+/** Max MPG lookups per sync run — two fueleconomy.gov calls each. */
+const MPG_BACKFILL_LIMIT = 15;
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -274,6 +278,38 @@ async function runSync(req: NextRequest): Promise<NextResponse> {
         for (const v of (needDesc ?? []) as Vehicle[]) {
           const res = await generateAndSaveVehicleDescription(v);
           if (!res.ok) console.warn(`[inventory/sync] description gen skipped for ${v.vin}: ${res.error}`);
+        }
+      }
+    }
+
+    // Auto-fill MPG for cars that don't have it yet. Best-effort and capped
+    // for the same reason as the description backfill above; a car whose
+    // engine can't be confidently matched (see mpgLookup.ts) just waits for
+    // a human to enter it via an admin override, same as any unplaceable spec.
+    {
+      const { data: needMpg, error: needMpgErr } = await supabase
+        .from("vehicles")
+        .select("id, vin, year, make, model")
+        .in("status", ["active", "fresh_arrival"])
+        .is("city_mpg", null)
+        .limit(MPG_BACKFILL_LIMIT);
+      if (needMpgErr) {
+        console.error("[inventory/sync] MPG backfill query failed:", needMpgErr.message);
+      } else {
+        for (const v of (needMpg ?? []) as Pick<Vehicle, "id" | "vin" | "year" | "make" | "model">[]) {
+          const decoded = await decodeVinSpecs(v.vin);
+          const result = await lookupMpg(v.year, v.make, v.model, {
+            liters: decoded?.engine_liters ?? null,
+            cylinders: decoded?.engine_cylinders ?? null,
+            drivetrain: decoded?.drivetrain ?? null,
+            hybrid: decoded?.engine_hybrid ?? false,
+          });
+          if (!result) continue;
+          const { error: mpgErr } = await supabase
+            .from("vehicles")
+            .update({ city_mpg: result.city_mpg, highway_mpg: result.highway_mpg })
+            .eq("id", v.id);
+          if (mpgErr) summary.errors.push(`${v.vin}: MPG save failed — ${mpgErr.message}`);
         }
       }
     }

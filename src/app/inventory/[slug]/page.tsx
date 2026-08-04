@@ -66,6 +66,8 @@ export default async function VehicleDetailPage({ params }: VDPProps) {
     { label: "Seats", value: vehicle.seats ? String(vehicle.seats) : null },
     { label: "VIN", value: vehicle.vin },
     { label: "Stock #", value: vehicle.stock_number },
+    { label: "City MPG", value: vehicle.city_mpg ? String(vehicle.city_mpg) : null },
+    { label: "Highway MPG", value: vehicle.highway_mpg ? String(vehicle.highway_mpg) : null },
   ];
 
   // Group features by category

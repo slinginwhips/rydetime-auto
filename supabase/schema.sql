@@ -27,6 +27,8 @@ create table if not exists vehicles (
   engine text,
   doors int,
   seats int,
+  city_mpg int,
+  highway_mpg int,
   description_dc text,
   description_ai text,
   meta_description text,

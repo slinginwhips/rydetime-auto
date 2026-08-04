@@ -20,6 +20,14 @@ export interface VinSpecs {
   fuel_type: string | null;
   doors: number | null;
   seats: number | null;
+  /** Raw displacement/cylinder count, kept alongside `engine` so callers (MPG
+   *  lookup) can match a specific engine option instead of parsing the label. */
+  engine_liters: number | null;
+  engine_cylinders: number | null;
+  /** Same cylinders/displacement can mean a hybrid or non-hybrid trim of the
+   *  same model (e.g. Camry vs Camry Hybrid) — those have very different MPG,
+   *  so callers need this to avoid blending the two together. */
+  engine_hybrid: boolean;
 }
 
 const VIN_REGEX = /^[A-HJ-NPR-Z0-9]{17}$/;
@@ -64,11 +72,17 @@ function formatBodyClass(value: string | null): string | null {
   return segment.replace(/\s*\[[^\]]*\]/g, "").trim() || null;
 }
 
-/** "4WD/4-Wheel Drive/4x4" → "4WD". */
+/**
+ * "4WD/4-Wheel Drive/4x4" → "4WD". vPIC also returns the bare "4x2"/"4x4"
+ * axle notation on its own (no slash-separated alternates to prefer instead)
+ * for a lot of truck VINs — normalized to the RWD/4WD labels customers and
+ * fueleconomy.gov's model listings actually use.
+ */
 function formatDriveType(value: string | null): string | null {
   const segment = firstSegment(value);
   if (!segment) return null;
   if (/^4x4$/i.test(segment)) return "4WD";
+  if (/^4x2$/i.test(segment)) return "RWD";
   return segment;
 }
 
@@ -123,6 +137,8 @@ export async function decodeVinSpecs(vin: string | null | undefined): Promise<Vi
     const row = payload.Results?.[0];
     if (!row) return null;
 
+    const liters = toNumber(clean(row.DisplacementL));
+    const electrification = clean(row.ElectrificationLevel);
     return {
       body_style: formatBodyClass(clean(row.BodyClass)),
       drivetrain: formatDriveType(clean(row.DriveType)),
@@ -131,6 +147,9 @@ export async function decodeVinSpecs(vin: string | null | undefined): Promise<Vi
       fuel_type: firstSegment(clean(row.FuelTypePrimary)),
       doors: toNumber(clean(row.Doors)),
       seats: toNumber(clean(row.Seats)),
+      engine_liters: liters != null ? Math.round(liters * 10) / 10 : null,
+      engine_cylinders: toNumber(clean(row.EngineCylinders)),
+      engine_hybrid: Boolean(electrification && /hybrid|electric/i.test(electrification)),
     };
   } catch {
     return null;
