@@ -35,8 +35,12 @@ const creditAppSchema = z.object({
   state: z.string().trim().max(40).optional(),
   zip: z.string().trim().max(15).optional(),
   housing_status: z.enum(["own", "rent", "other"]).optional(),
-  years_at_address: z.string().trim().max(10).optional(),
-  months_at_address: z.string().trim().max(10).optional(),
+  // Generous max: browser autofill occasionally drops a full street address
+  // into these (untagged, adjacent-to-address-fields) boxes. numOrNull()
+  // below discards anything non-numeric, so a stray autofill value should
+  // never hard-reject the whole application — it should just get dropped.
+  years_at_address: z.string().trim().max(200).optional(),
+  months_at_address: z.string().trim().max(200).optional(),
   monthly_housing_payment: z.string().trim().max(40).optional(),
   prev_address: z.string().trim().max(200).optional(),
 
@@ -46,8 +50,8 @@ const creditAppSchema = z.object({
   employer_name: z.string().trim().max(150).optional(),
   job_title: z.string().trim().max(100).optional(),
   work_phone: z.string().trim().max(30).optional(),
-  years_employed: z.string().trim().max(10).optional(),
-  months_employed: z.string().trim().max(10).optional(),
+  years_employed: z.string().trim().max(200).optional(),
+  months_employed: z.string().trim().max(200).optional(),
   gross_monthly_income: z.string().trim().max(40).optional(),
   other_income: z.string().trim().max(40).optional(),
   other_income_source: z.string().trim().max(150).optional(),

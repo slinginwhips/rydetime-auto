@@ -259,12 +259,12 @@ export default function CreditApplicationForm({
           </div>
           <div className="sm:col-span-1">
             <label htmlFor="ca-yrs-addr" className={labelClass}>Years here</label>
-            <input id="ca-yrs-addr" inputMode="numeric" maxLength={2} className={inputClass}
+            <input id="ca-yrs-addr" inputMode="numeric" maxLength={2} autoComplete="off" className={inputClass}
               {...register("years_at_address")} />
           </div>
           <div className="sm:col-span-1">
             <label htmlFor="ca-mos-addr" className={labelClass}>+ Months</label>
-            <input id="ca-mos-addr" inputMode="numeric" maxLength={2} className={inputClass}
+            <input id="ca-mos-addr" inputMode="numeric" maxLength={2} autoComplete="off" className={inputClass}
               {...register("months_at_address")} />
           </div>
           <div className="sm:col-span-6">
@@ -314,12 +314,12 @@ export default function CreditApplicationForm({
               <div className="sm:col-span-3 grid grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="ca-yrs-emp" className={labelClass}>Years on job</label>
-                  <input id="ca-yrs-emp" inputMode="numeric" maxLength={2} className={inputClass}
+                  <input id="ca-yrs-emp" inputMode="numeric" maxLength={2} autoComplete="off" className={inputClass}
                     {...register("years_employed")} />
                 </div>
                 <div>
                   <label htmlFor="ca-mos-emp" className={labelClass}>+ Months</label>
-                  <input id="ca-mos-emp" inputMode="numeric" maxLength={2} className={inputClass}
+                  <input id="ca-mos-emp" inputMode="numeric" maxLength={2} autoComplete="off" className={inputClass}
                     {...register("months_employed")} />
                 </div>
               </div>
