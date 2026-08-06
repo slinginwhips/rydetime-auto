@@ -50,6 +50,7 @@ export default function CreditApplicationForm({
 }: CreditApplicationFormProps) {
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [dcPushed, setDcPushed] = useState<boolean>(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -66,6 +67,7 @@ export default function CreditApplicationForm({
       return;
     }
     setStatus("submitting");
+    setErrorMessage(null);
     try {
       const body: CreditApplicationSubmission = {
         ...values,
@@ -79,10 +81,16 @@ export default function CreditApplicationForm({
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (!res.ok || !data.success) throw new Error("submit failed");
+      if (!res.ok || !data.success) {
+        const firstFieldError = data?.details
+          ? (Object.values(data.details)[0] as string[] | undefined)?.[0]
+          : undefined;
+        throw new Error(firstFieldError || data?.error || "submit failed");
+      }
       setDcPushed(data.dc_pushed !== false);
       setStatus("success");
-    } catch {
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : null);
       setStatus("error");
     }
   };
@@ -445,7 +453,10 @@ export default function CreditApplicationForm({
 
       {status === "error" && (
         <p className="rounded-md border border-accent/40 bg-accent/5 px-4 py-3 text-sm text-accent">
-          Something went wrong submitting your application. Please try again, or call us at (757) 937-8664.
+          {errorMessage && errorMessage !== "submit failed"
+            ? errorMessage
+            : "Something went wrong submitting your application."}{" "}
+          Please fix and try again, or call us at (757) 937-8664.
         </p>
       )}
 

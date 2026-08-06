@@ -14,16 +14,18 @@ import type { Vehicle } from "@/types/vehicle";
 
 export const dynamic = "force-dynamic";
 
-// SSN validated for shape only — 9 digits with optional dashes/spaces. It is
-// NEVER stored (only last 4) and NEVER logged.
-const ssnRe = /^\d{3}[-\s]?\d{2}[-\s]?\d{4}$/;
+// SSN validated for shape only — exactly 9 digits once formatting is
+// stripped, so dashes, spaces (including doubled-up ones from mobile
+// autocorrect/autofill), or dots between groups don't reject valid input. It
+// is NEVER stored (only last 4) and NEVER logged.
+const hasNineDigits = (v: string) => v.replace(/\D/g, "").length === 9;
 
 const creditAppSchema = z.object({
   first_name: z.string().trim().min(1, "First name is required").max(100),
   middle_name: z.string().trim().max(100).optional(),
   last_name: z.string().trim().min(1, "Last name is required").max(100),
   dob: z.string().trim().max(20).optional(),
-  ssn: z.string().trim().regex(ssnRe, "Enter a valid 9-digit SSN").optional().or(z.literal("")),
+  ssn: z.string().trim().refine(hasNineDigits, "Enter a valid 9-digit SSN").optional().or(z.literal("")),
   drivers_license: z.string().trim().max(40).optional(),
   email: z.string().trim().email().max(254).optional().or(z.literal("")),
   phone: z.string().trim().min(7, "Phone is required").max(30),
@@ -54,7 +56,7 @@ const creditAppSchema = z.object({
   co_first_name: z.string().trim().max(100).optional(),
   co_last_name: z.string().trim().max(100).optional(),
   co_dob: z.string().trim().max(20).optional(),
-  co_ssn: z.string().trim().regex(ssnRe, "Enter a valid co-applicant SSN").optional().or(z.literal("")),
+  co_ssn: z.string().trim().refine(hasNineDigits, "Enter a valid co-applicant SSN").optional().or(z.literal("")),
   co_email: z.string().trim().email().max(254).optional().or(z.literal("")),
   co_phone: z.string().trim().max(30).optional(),
   co_employer_name: z.string().trim().max(150).optional(),
