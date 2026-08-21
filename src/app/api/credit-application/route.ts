@@ -20,27 +20,30 @@ export const dynamic = "force-dynamic";
 // is NEVER stored (only last 4) and NEVER logged.
 const hasNineDigits = (v: string) => v.replace(/\D/g, "").length === 9;
 
+// Years/months boxes: 1-2 digits, nothing else.
+const digits = z.string().trim().regex(/^\d{0,2}$/, "Enter a number of years/months");
+
 const creditAppSchema = z.object({
   first_name: z.string().trim().min(1, "First name is required").max(100),
   middle_name: z.string().trim().max(100).optional(),
   last_name: z.string().trim().min(1, "Last name is required").max(100),
-  dob: z.string().trim().max(20).optional(),
-  ssn: z.string().trim().refine(hasNineDigits, "Enter a valid 9-digit SSN").optional().or(z.literal("")),
+  dob: z.string().trim().min(1, "Date of birth is required").max(20),
+  ssn: z.string().trim().refine(hasNineDigits, "Enter a valid 9-digit SSN"),
   drivers_license: z.string().trim().max(40).optional(),
   email: z.string().trim().email().max(254).optional().or(z.literal("")),
   phone: z.string().trim().min(7, "Phone is required").max(30),
 
-  address: z.string().trim().max(200).optional(),
-  city: z.string().trim().max(100).optional(),
-  state: z.string().trim().max(40).optional(),
-  zip: z.string().trim().max(15).optional(),
+  address: z.string().trim().min(1, "Address is required").max(200),
+  city: z.string().trim().min(1, "City is required").max(100),
+  state: z.string().trim().min(1, "State is required").max(40),
+  zip: z.string().trim().min(1, "ZIP is required").max(15),
   housing_status: z.enum(["own", "rent", "other"]).optional(),
-  // Generous max: browser autofill occasionally drops a full street address
-  // into these (untagged, adjacent-to-address-fields) boxes. numOrNull()
-  // below discards anything non-numeric, so a stray autofill value should
-  // never hard-reject the whole application — it should just get dropped.
-  years_at_address: z.string().trim().max(200).optional(),
-  months_at_address: z.string().trim().max(200).optional(),
+  // Browser autofill likes to drop a full street address into these
+  // (untagged, adjacent-to-address-fields) boxes. numOrNull() below would
+  // silently discard anything non-numeric, which lost the value entirely —
+  // so require digits here and let the customer correct it instead.
+  years_at_address: digits.min(1, "Time at address is required"),
+  months_at_address: digits.optional().or(z.literal("")),
   monthly_housing_payment: z.string().trim().max(40).optional(),
   prev_address: z.string().trim().max(200).optional(),
 
@@ -50,9 +53,9 @@ const creditAppSchema = z.object({
   employer_name: z.string().trim().max(150).optional(),
   job_title: z.string().trim().max(100).optional(),
   work_phone: z.string().trim().max(30).optional(),
-  years_employed: z.string().trim().max(200).optional(),
-  months_employed: z.string().trim().max(200).optional(),
-  gross_monthly_income: z.string().trim().max(40).optional(),
+  years_employed: digits.optional().or(z.literal("")),
+  months_employed: digits.optional().or(z.literal("")),
+  gross_monthly_income: z.string().trim().min(1, "Monthly income is required").max(40),
   other_income: z.string().trim().max(40).optional(),
   other_income_source: z.string().trim().max(150).optional(),
 
@@ -81,7 +84,33 @@ const creditAppSchema = z.object({
 
   // Honeypot — real users never fill this.
   website: z.string().optional(),
-});
+})
+  // Conditionally-required blocks: retired applicants have no employer, and
+  // co-applicant details only matter when a co-applicant was added.
+  .superRefine((v, ctx) => {
+    const need = (path: string, value: string | undefined, message: string) => {
+      if (!value || !value.trim()) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
+      }
+    };
+    if (v.employment_status !== "retired") {
+      need("employer_name", v.employer_name, "Employer is required");
+      need("job_title", v.job_title, "Job title is required");
+      need("years_employed", v.years_employed, "Time on the job is required");
+    }
+    if (v.has_co_applicant) {
+      need("co_first_name", v.co_first_name, "Co-applicant first name is required");
+      need("co_last_name", v.co_last_name, "Co-applicant last name is required");
+      need("co_dob", v.co_dob, "Co-applicant date of birth is required");
+      need("co_ssn", v.co_ssn, "Co-applicant SSN is required");
+      need("co_phone", v.co_phone, "Co-applicant phone is required");
+      need(
+        "co_gross_monthly_income",
+        v.co_gross_monthly_income,
+        "Co-applicant income is required"
+      );
+    }
+  });
 
 const last4 = (ssn: string | undefined): string | null => {
   if (!ssn) return null;

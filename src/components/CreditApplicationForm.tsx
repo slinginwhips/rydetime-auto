@@ -17,6 +17,15 @@ const inputClass =
 const labelClass = "mb-1.5 block text-sm font-medium text-text-secondary";
 const errClass = "mt-1 text-xs text-accent";
 
+// Years/months boxes sit next to address fields, so browser autofill likes to
+// drop a whole street address into them. The API silently discards anything
+// non-numeric, which is how apps arrived with blank time-at-address — so reject
+// it here instead of letting it vanish after submit.
+const digitRule = (message: string) => ({
+  // {0,2} so a blank optional box isn't flagged; `required` handles emptiness.
+  pattern: { value: /^\d{0,2}$/, message },
+});
+
 function SectionCard({
   step,
   title,
@@ -56,7 +65,12 @@ export default function CreditApplicationForm({
     handleSubmit,
     watch,
     formState: { errors },
-  } = useForm<FormValues>({ defaultValues: { housing_status: "rent", employment_status: "employed" } });
+  } = useForm<FormValues>({
+    // Hidden sections (retired applicants, no co-applicant) must not keep
+    // validating or submitting stale values after they unmount.
+    shouldUnregister: true,
+    defaultValues: { housing_status: "rent", employment_status: "employed" },
+  });
 
   const hasCo = watch("has_co_applicant");
   const empStatus = watch("employment_status");
@@ -93,6 +107,16 @@ export default function CreditApplicationForm({
       setErrorMessage(err instanceof Error ? err.message : null);
       setStatus("error");
     }
+  };
+
+  // A blocked submit used to look like a dead button when the offending field
+  // was off-screen. Jump to it and focus it so the customer can see why.
+  const onInvalid = (fieldErrors: typeof errors) => {
+    const first = Object.keys(fieldErrors)[0];
+    if (!first) return;
+    const el = document.querySelector<HTMLElement>(`[name="${first}"]`);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    el?.focus({ preventScroll: true });
   };
 
   if (status === "success") {
@@ -132,7 +156,7 @@ export default function CreditApplicationForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate className="space-y-6">
       {vehicleLabel && (
         <p className="rounded-md border border-border-subtle bg-surface px-4 py-3 text-sm text-text-secondary">
           Applying for: <span className="font-semibold text-text-primary">{vehicleLabel}</span>
@@ -257,15 +281,28 @@ export default function CreditApplicationForm({
             <input id="ca-house-pmt" inputMode="numeric" placeholder="$" className={inputClass}
               {...register("monthly_housing_payment")} />
           </div>
-          <div className="sm:col-span-1">
-            <label htmlFor="ca-yrs-addr" className={labelClass}>Years here</label>
-            <input id="ca-yrs-addr" inputMode="numeric" maxLength={2} autoComplete="off" className={inputClass}
-              {...register("years_at_address")} />
-          </div>
-          <div className="sm:col-span-1">
-            <label htmlFor="ca-mos-addr" className={labelClass}>+ Months</label>
-            <input id="ca-mos-addr" inputMode="numeric" maxLength={2} autoComplete="off" className={inputClass}
-              {...register("months_at_address")} />
+          <div className="sm:col-span-2">
+            <span className={labelClass}>Time at this address *</span>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <input id="ca-yrs-addr" inputMode="numeric" maxLength={2} autoComplete="off"
+                  placeholder="Years" aria-label="Years at this address" className={inputClass}
+                  {...register("years_at_address", {
+                    required: "How long you've lived here is required",
+                    ...digitRule("Years must be a number"),
+                  })} />
+              </div>
+              <div>
+                <input id="ca-mos-addr" inputMode="numeric" maxLength={2} autoComplete="off"
+                  placeholder="Months" aria-label="Additional months at this address" className={inputClass}
+                  {...register("months_at_address", digitRule("Months must be a number"))} />
+              </div>
+            </div>
+            {(errors.years_at_address || errors.months_at_address) && (
+              <p className={errClass}>
+                {errors.years_at_address?.message ?? errors.months_at_address?.message}
+              </p>
+            )}
           </div>
           <div className="sm:col-span-6">
             <label htmlFor="ca-prev-addr" className={labelClass}>
@@ -298,30 +335,39 @@ export default function CreditApplicationForm({
           {empStatus !== "retired" && (
             <>
               <div className="sm:col-span-3">
-                <label htmlFor="ca-employer" className={labelClass}>Employer</label>
+                <label htmlFor="ca-employer" className={labelClass}>Employer *</label>
                 <input id="ca-employer" autoComplete="organization" className={inputClass}
-                  {...register("employer_name")} />
+                  {...register("employer_name", { required: "Employer is required" })} />
+                {errors.employer_name && <p className={errClass}>{errors.employer_name.message}</p>}
               </div>
               <div className="sm:col-span-3">
-                <label htmlFor="ca-title" className={labelClass}>Job title</label>
+                <label htmlFor="ca-title" className={labelClass}>Job title *</label>
                 <input id="ca-title" autoComplete="organization-title" className={inputClass}
-                  {...register("job_title")} />
+                  {...register("job_title", { required: "Job title is required" })} />
+                {errors.job_title && <p className={errClass}>{errors.job_title.message}</p>}
               </div>
               <div className="sm:col-span-3">
                 <label htmlFor="ca-work-phone" className={labelClass}>Work phone</label>
                 <input id="ca-work-phone" type="tel" className={inputClass} {...register("work_phone")} />
               </div>
-              <div className="sm:col-span-3 grid grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="ca-yrs-emp" className={labelClass}>Years on job</label>
-                  <input id="ca-yrs-emp" inputMode="numeric" maxLength={2} autoComplete="off" className={inputClass}
-                    {...register("years_employed")} />
+              <div className="sm:col-span-3">
+                <span className={labelClass}>Time on this job *</span>
+                <div className="grid grid-cols-2 gap-4">
+                  <input id="ca-yrs-emp" inputMode="numeric" maxLength={2} autoComplete="off"
+                    placeholder="Years" aria-label="Years on this job" className={inputClass}
+                    {...register("years_employed", {
+                      required: "How long you've been on the job is required",
+                      ...digitRule("Years must be a number"),
+                    })} />
+                  <input id="ca-mos-emp" inputMode="numeric" maxLength={2} autoComplete="off"
+                    placeholder="Months" aria-label="Additional months on this job" className={inputClass}
+                    {...register("months_employed", digitRule("Months must be a number"))} />
                 </div>
-                <div>
-                  <label htmlFor="ca-mos-emp" className={labelClass}>+ Months</label>
-                  <input id="ca-mos-emp" inputMode="numeric" maxLength={2} autoComplete="off" className={inputClass}
-                    {...register("months_employed")} />
-                </div>
+                {(errors.years_employed || errors.months_employed) && (
+                  <p className={errClass}>
+                    {errors.years_employed?.message ?? errors.months_employed?.message}
+                  </p>
+                )}
               </div>
             </>
           )}
@@ -352,12 +398,16 @@ export default function CreditApplicationForm({
         {hasCo && (
           <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label htmlFor="ca-co-first" className={labelClass}>Co-applicant first name</label>
-              <input id="ca-co-first" className={inputClass} {...register("co_first_name")} />
+              <label htmlFor="ca-co-first" className={labelClass}>Co-applicant first name *</label>
+              <input id="ca-co-first" className={inputClass}
+                {...register("co_first_name", { required: "Co-applicant first name is required" })} />
+              {errors.co_first_name && <p className={errClass}>{errors.co_first_name.message}</p>}
             </div>
             <div>
-              <label htmlFor="ca-co-last" className={labelClass}>Co-applicant last name</label>
-              <input id="ca-co-last" className={inputClass} {...register("co_last_name")} />
+              <label htmlFor="ca-co-last" className={labelClass}>Co-applicant last name *</label>
+              <input id="ca-co-last" className={inputClass}
+                {...register("co_last_name", { required: "Co-applicant last name is required" })} />
+              {errors.co_last_name && <p className={errClass}>{errors.co_last_name.message}</p>}
             </div>
             <div>
               <label htmlFor="ca-co-rel" className={labelClass}>Relationship to you</label>
@@ -365,32 +415,40 @@ export default function CreditApplicationForm({
                 {...register("co_relationship")} />
             </div>
             <div>
-              <label htmlFor="ca-co-phone" className={labelClass}>Co-applicant phone</label>
-              <input id="ca-co-phone" type="tel" className={inputClass} {...register("co_phone")} />
+              <label htmlFor="ca-co-phone" className={labelClass}>Co-applicant phone *</label>
+              <input id="ca-co-phone" type="tel" className={inputClass}
+                {...register("co_phone", { required: "Co-applicant phone is required" })} />
+              {errors.co_phone && <p className={errClass}>{errors.co_phone.message}</p>}
             </div>
             <div>
               <label htmlFor="ca-co-email" className={labelClass}>Co-applicant email</label>
               <input id="ca-co-email" type="email" className={inputClass} {...register("co_email")} />
             </div>
             <div>
-              <label htmlFor="ca-co-dob" className={labelClass}>Co-applicant date of birth</label>
-              <input id="ca-co-dob" type="date" className={inputClass} {...register("co_dob")} />
+              <label htmlFor="ca-co-dob" className={labelClass}>Co-applicant date of birth *</label>
+              <input id="ca-co-dob" type="date" className={inputClass}
+                {...register("co_dob", { required: "Co-applicant date of birth is required" })} />
+              {errors.co_dob && <p className={errClass}>{errors.co_dob.message}</p>}
             </div>
             <div>
               <label htmlFor="ca-co-ssn" className={labelClass}>
-                Co-applicant SSN <span className="font-normal text-text-muted">🔒 not stored here</span>
+                Co-applicant SSN * <span className="font-normal text-text-muted">🔒 not stored here</span>
               </label>
               <input id="ca-co-ssn" inputMode="numeric" autoComplete="off" maxLength={11}
                 placeholder="000-00-0000" className={inputClass}
                 {...register("co_ssn", {
+                  required: "Co-applicant SSN is required to check their credit",
                   pattern: { value: /^\d{3}[-\s]?\d{2}[-\s]?\d{4}$/, message: "Enter a valid 9-digit SSN" },
                 })} />
               {errors.co_ssn && <p className={errClass}>{errors.co_ssn.message}</p>}
             </div>
             <div>
-              <label htmlFor="ca-co-income" className={labelClass}>Co-applicant monthly income</label>
+              <label htmlFor="ca-co-income" className={labelClass}>Co-applicant monthly income *</label>
               <input id="ca-co-income" inputMode="numeric" placeholder="$" className={inputClass}
-                {...register("co_gross_monthly_income")} />
+                {...register("co_gross_monthly_income", { required: "Co-applicant income is required" })} />
+              {errors.co_gross_monthly_income && (
+                <p className={errClass}>{errors.co_gross_monthly_income.message}</p>
+              )}
             </div>
             <div className="sm:col-span-2">
               <label htmlFor="ca-co-employer" className={labelClass}>Co-applicant employer</label>
@@ -457,6 +515,12 @@ export default function CreditApplicationForm({
             ? errorMessage
             : "Something went wrong submitting your application."}{" "}
           Please fix and try again, or call us at (757) 937-8664.
+        </p>
+      )}
+
+      {Object.keys(errors).length > 0 && (
+        <p className="rounded-md border border-accent/40 bg-accent/5 px-4 py-3 text-sm text-accent">
+          A few required fields still need to be filled in — they&apos;re marked in red above.
         </p>
       )}
 
