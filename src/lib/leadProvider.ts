@@ -228,6 +228,7 @@ export function buildCreditAppAdfXml(
     "AUTHORIZATION",
     line("Electronic signature", app.signature_name),
     line("Credit-pull consent", app.consent_credit_pull ? "YES" : "NO"),
+    line("SMS opt-in consent", app.sms_consent ? "YES" : "NO"),
     line("Signed at", now),
   ]
     .filter((v) => v !== null && v !== undefined)

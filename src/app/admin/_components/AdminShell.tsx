@@ -12,6 +12,7 @@ const NAV = [
   { href: "/admin/trade", label: "Trades" },
   { href: "/admin/holds", label: "Holds" },
   { href: "/admin/sync", label: "Sync" },
+  { href: "/admin/forms", label: "Forms" },
   { href: "/admin/settings", label: "Settings" },
 ];
 
@@ -41,7 +42,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   return (
     <div className="flex min-h-screen bg-background">
       {/* Sidebar */}
-      <aside className="hidden w-56 shrink-0 flex-col border-r border-border-subtle bg-background-secondary md:flex">
+      <aside className="hidden w-56 shrink-0 flex-col border-r border-border-subtle bg-background-secondary md:flex print:hidden">
         <div className="border-b border-border-subtle px-5 py-5">
           <Link href="/admin" className="block">
             <span className="text-sm font-bold tracking-widest text-text-primary">
@@ -86,7 +87,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
       {/* Mobile top bar + content */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-2 overflow-x-auto border-b border-border-subtle bg-background-secondary px-4 py-3 md:hidden">
+        <header className="flex items-center gap-2 overflow-x-auto border-b border-border-subtle bg-background-secondary px-4 py-3 md:hidden print:hidden">
           {NAV.map((item) => (
             <Link
               key={item.href}
@@ -108,7 +109,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             Log Out
           </button>
         </header>
-        <main className="min-w-0 flex-1 p-4 md:p-8">{children}</main>
+        <main className="min-w-0 flex-1 p-4 md:p-8 print:p-0">{children}</main>
       </div>
     </div>
   );

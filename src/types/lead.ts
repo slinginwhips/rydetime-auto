@@ -260,6 +260,8 @@ export interface CreditApplicationSubmission {
   // e-signature / consent
   signature_name: string;
   consent_credit_pull: boolean;
+  // Separate, OPTIONAL SMS opt-in — unchecked by default, never required to submit.
+  sms_consent?: boolean;
   source_url?: string;
 
   // honeypot
@@ -312,6 +314,7 @@ export interface CreditApplication {
   desired_monthly_payment: string | null;
   signature_name: string;
   consent_credit_pull: boolean;
+  sms_consent: boolean;
   signer_ip: string | null;
   signer_user_agent: string | null;
   signed_at: string;
@@ -322,3 +325,10 @@ export interface CreditApplication {
 
 export const CREDIT_APP_AUTHORIZATION_TEXT =
   "By typing my name below and submitting this application, I certify that the information provided is true and complete, and I authorize RydeTime Auto and its lending/financing partners to obtain my consumer credit report and to verify the information in this application for the purpose of evaluating my creditworthiness for a vehicle financing transaction. I understand this is an application only and does not guarantee financing approval or any particular terms. This authorization is a legally binding electronic signature under the federal E-SIGN Act and applicable state law.";
+
+/**
+ * Separate, OPTIONAL SMS consent disclosure (Twilio A2P 10DLC compliance).
+ * Must never be required to submit the credit application.
+ */
+export const SMS_CONSENT_DISCLOSURE =
+  "I consent to receive text messages from RydeTime Auto regarding my vehicle inquiry, appointments, credit application, financing, vehicle purchase, required documents, title/registration matters, and related customer service communications. Message frequency varies. Message and data rates may apply. Reply STOP to opt out or HELP for assistance. Consent is not required to submit an application or purchase a vehicle.";

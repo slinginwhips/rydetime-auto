@@ -266,6 +266,7 @@ export default async function AdminLeadDetailPage({
                     <Field label="Desired Monthly" value={creditApp.desired_monthly_payment} />
                     <Field label="Electronic Signature" value={creditApp.signature_name} />
                     <Field label="Credit-Pull Consent" value={creditApp.consent_credit_pull ? "Authorized" : "No"} />
+                    <Field label="SMS Consent" value={creditApp.sms_consent ? "Opted in" : "Not opted in"} />
                     <Field label="Signer IP" value={creditApp.signer_ip} />
                   </dl>
                 </div>

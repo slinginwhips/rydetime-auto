@@ -79,6 +79,11 @@ create table if not exists credit_applications (
   created_at timestamptz not null default now()
 );
 
+-- Separate, OPTIONAL SMS opt-in (Twilio A2P 10DLC compliance) — unchecked by
+-- default on the form and never required to submit. Added after initial launch,
+-- so it's a backfill-safe alter for existing databases.
+alter table credit_applications add column if not exists sms_consent boolean not null default false;
+
 create index if not exists idx_credit_apps_lead on credit_applications (lead_id);
 create index if not exists idx_credit_apps_created on credit_applications (created_at desc);
 

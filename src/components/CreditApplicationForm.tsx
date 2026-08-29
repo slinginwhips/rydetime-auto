@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import Link from "next/link";
 import type { CreditApplicationSubmission } from "@/types/lead";
-import { CREDIT_APP_AUTHORIZATION_TEXT } from "@/types/lead";
+import { CREDIT_APP_AUTHORIZATION_TEXT, SMS_CONSENT_DISCLOSURE } from "@/types/lead";
 
 interface CreditApplicationFormProps {
   vehicleId?: string;
@@ -208,6 +209,24 @@ export default function CreditApplicationForm({
             <input id="ca-phone" type="tel" autoComplete="tel" className={inputClass}
               {...register("phone", { required: "Phone is required" })} />
             {errors.phone && <p className={errClass}>{errors.phone.message}</p>}
+          </div>
+          <div className="sm:col-span-2 rounded-md border border-border-subtle bg-surface p-4">
+            <label className="flex cursor-pointer items-start gap-3">
+              <input type="checkbox" className="mt-0.5 h-4 w-4 accent-accent"
+                {...register("sms_consent")} />
+              <span className="text-xs leading-relaxed text-text-secondary">
+                {SMS_CONSENT_DISCLOSURE}
+              </span>
+            </label>
+            <p className="mt-2 pl-7 text-xs text-text-muted">
+              <Link href="/privacy" target="_blank" className="text-accent hover:underline">
+                Privacy Policy
+              </Link>
+              {" · "}
+              <Link href="/terms" target="_blank" className="text-accent hover:underline">
+                Terms &amp; Conditions
+              </Link>
+            </p>
           </div>
           <div>
             <label htmlFor="ca-email" className={labelClass}>Email</label>

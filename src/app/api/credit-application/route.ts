@@ -80,6 +80,8 @@ const creditAppSchema = z.object({
   consent_credit_pull: z.literal(true, {
     errorMap: () => ({ message: "You must authorize the credit check to submit." }),
   }),
+  // Separate, OPTIONAL SMS opt-in — never required to submit the application.
+  sms_consent: z.boolean().optional(),
   source_url: z.string().trim().max(2000).optional(),
 
   // Honeypot — real users never fill this.
@@ -288,6 +290,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       desired_monthly_payment: app.desired_monthly_payment ?? null,
       signature_name: app.signature_name,
       consent_credit_pull: app.consent_credit_pull,
+      sms_consent: app.sms_consent === true,
       signer_ip:
         req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
         req.headers.get("x-real-ip") ||

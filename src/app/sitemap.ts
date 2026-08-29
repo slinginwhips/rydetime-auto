@@ -16,8 +16,8 @@ const STATIC_ROUTES = [
   "/fresh-arrivals",
   "/under-15000",
   "/under-20000",
-  "/privacy-policy",
-  "/terms-of-use",
+  "/privacy",
+  "/terms",
   "/accessibility",
 ];
 
