@@ -6,9 +6,20 @@ import Link from "next/link";
 import type { CreditApplicationSubmission } from "@/types/lead";
 import { CREDIT_APP_AUTHORIZATION_TEXT, SMS_CONSENT_DISCLOSURE } from "@/types/lead";
 
+export interface VehicleOption {
+  id: string;
+  year: number | null;
+  make: string;
+  model: string;
+  trim: string | null;
+  vin: string | null;
+  stock_number: string | null;
+}
+
 interface CreditApplicationFormProps {
   vehicleId?: string;
   vehicleLabel?: string;
+  vehicles?: VehicleOption[];
 }
 
 type FormValues = Omit<CreditApplicationSubmission, "vehicle_id" | "source_url">;
@@ -57,14 +68,18 @@ function SectionCard({
 export default function CreditApplicationForm({
   vehicleId,
   vehicleLabel,
+  vehicles,
 }: CreditApplicationFormProps) {
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [dcPushed, setDcPushed] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [pickedVehicleId, setPickedVehicleId] = useState<string | undefined>(undefined);
+  const [showOtherVin, setShowOtherVin] = useState(false);
   const {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<FormValues>({
     // Hidden sections (retired applicants, no co-applicant) must not keep
@@ -86,7 +101,7 @@ export default function CreditApplicationForm({
     try {
       const body: CreditApplicationSubmission = {
         ...values,
-        vehicle_id: vehicleId,
+        vehicle_id: pickedVehicleId ?? vehicleId,
         vin: values.vin || undefined,
         source_url: typeof window !== "undefined" ? window.location.href : undefined,
       };
@@ -482,9 +497,50 @@ export default function CreditApplicationForm({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {!vehicleLabel && (
             <div className="sm:col-span-2">
-              <label htmlFor="ca-vin" className={labelClass}>Vehicle you&apos;re interested in</label>
-              <input id="ca-vin" placeholder="Year / Make / Model or VIN (optional)" autoComplete="off" className={inputClass}
-                {...register("vin")} />
+              <label htmlFor="ca-vehicle-pick" className={labelClass}>Vehicle you&apos;re interested in</label>
+              {vehicles && vehicles.length > 0 ? (
+                <>
+                  <select
+                    id="ca-vehicle-pick"
+                    className={inputClass}
+                    defaultValue=""
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === "" || val === "__other__") {
+                        setPickedVehicleId(undefined);
+                        setShowOtherVin(val === "__other__");
+                        setValue("vin", "");
+                      } else {
+                        const picked = vehicles.find((v) => v.id === val);
+                        setPickedVehicleId(val);
+                        setShowOtherVin(false);
+                        setValue("vin", picked?.vin ?? "");
+                      }
+                    }}
+                  >
+                    <option value="">— Select a vehicle (optional) —</option>
+                    {vehicles.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {[v.year, v.make, v.model, v.trim].filter(Boolean).join(" ")}
+                        {v.stock_number ? ` · #${v.stock_number}` : ""}
+                      </option>
+                    ))}
+                    <option value="__other__">Not sure / don&apos;t see my vehicle</option>
+                  </select>
+                  {showOtherVin && (
+                    <input
+                      id="ca-vin"
+                      placeholder="Year / Make / Model or VIN (optional)"
+                      autoComplete="off"
+                      className={`${inputClass} mt-2`}
+                      {...register("vin")}
+                    />
+                  )}
+                </>
+              ) : (
+                <input id="ca-vin" placeholder="Year / Make / Model or VIN (optional)" autoComplete="off" className={inputClass}
+                  {...register("vin")} />
+              )}
             </div>
           )}
           <div>

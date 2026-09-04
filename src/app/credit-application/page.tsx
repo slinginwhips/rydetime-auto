@@ -1,6 +1,6 @@
 import { generatePageMetadata } from "@/lib/seo";
 import { DEALERSHIP } from "@/lib/dealership";
-import { getVehicleById } from "@/lib/vehicles";
+import { getVehicleById, getAllActiveVehicles } from "@/lib/vehicles";
 import CreditApplicationForm from "@/components/CreditApplicationForm";
 
 export const metadata = generatePageMetadata({
@@ -18,12 +18,25 @@ export default async function CreditApplicationPage({
   searchParams: Promise<{ vehicle?: string }>;
 }) {
   const { vehicle: vehicleId } = await searchParams;
-  const vehicle = vehicleId ? await getVehicleById(vehicleId) : null;
+  const [vehicle, allVehicles] = await Promise.all([
+    vehicleId ? getVehicleById(vehicleId) : Promise.resolve(null),
+    getAllActiveVehicles(),
+  ]);
   const vehicleLabel = vehicle
     ? `${vehicle.year} ${vehicle.make} ${vehicle.model}${
         vehicle.trim ? ` ${vehicle.trim}` : ""
       } · Stock ${vehicle.stock_number}`
     : undefined;
+
+  const vehicleOptions = allVehicles.map((v) => ({
+    id: v.id,
+    year: v.year,
+    make: v.make,
+    model: v.model,
+    trim: v.trim ?? null,
+    vin: v.vin ?? null,
+    stock_number: v.stock_number ?? null,
+  }));
 
   return (
     <main className="bg-background">
@@ -48,7 +61,7 @@ export default async function CreditApplicationPage({
         <div className="grid gap-8 lg:grid-cols-5">
           {/* The application */}
           <div className="lg:col-span-3">
-            <CreditApplicationForm vehicleId={vehicleId} vehicleLabel={vehicleLabel} />
+            <CreditApplicationForm vehicleId={vehicleId} vehicleLabel={vehicleLabel} vehicles={vehicleOptions} />
           </div>
 
           {/* Side info */}
