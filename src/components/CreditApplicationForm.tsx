@@ -483,7 +483,7 @@ export default function CreditApplicationForm({
           {!vehicleLabel && (
             <div className="sm:col-span-2">
               <label htmlFor="ca-vin" className={labelClass}>Vehicle you&apos;re interested in</label>
-              <input id="ca-vin" placeholder="Year / Make / Model or VIN (optional)" className={inputClass}
+              <input id="ca-vin" placeholder="Year / Make / Model or VIN (optional)" autoComplete="off" className={inputClass}
                 {...register("vin")} />
             </div>
           )}

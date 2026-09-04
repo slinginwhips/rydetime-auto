@@ -71,7 +71,7 @@ const creditAppSchema = z.object({
   co_relationship: z.string().trim().max(60).optional(),
 
   vehicle_id: z.string().trim().max(100).optional(),
-  vin: z.string().trim().max(20).optional(),
+  vin: z.string().trim().max(200).optional(),
   stock_number: z.string().trim().max(50).optional(),
   requested_down_payment: z.string().trim().max(40).optional(),
   desired_monthly_payment: z.string().trim().max(40).optional(),
