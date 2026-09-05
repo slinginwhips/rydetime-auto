@@ -37,6 +37,14 @@ export interface Lead {
   dc_pushed: boolean;
   dc_pushed_at: string | null;
   created_at: string;
+  // BDC (marketplace auto-response) — added in supabase/bdc.sql. Optional so
+  // existing read/insert sites that predate these columns still typecheck.
+  source?: string | null;
+  external_id?: string | null;
+  reply_channel?: string | null;
+  reply_target?: string | null;
+  opted_out?: boolean;
+  bdc_status?: string | null;
 }
 
 export interface LeadEvent {
@@ -44,6 +52,30 @@ export interface LeadEvent {
   lead_id: string;
   event_type: string;
   notes: string | null;
+  created_at: string;
+}
+
+/** One message in a lead's BDC conversation thread (bdc_messages). */
+export interface BdcMessage {
+  id: string;
+  lead_id: string;
+  direction: "outbound" | "inbound";
+  channel: string;
+  body: string | null;
+  sent: boolean;
+  skip_reason: string | null;
+  provider_sid: string | null;
+  created_at: string;
+}
+
+/** A file a customer texted in, filed against their lead (bdc_attachments). */
+export interface BdcAttachment {
+  id: string;
+  lead_id: string;
+  message_id: string | null;
+  storage_path: string;
+  content_type: string | null;
+  filename: string | null;
   created_at: string;
 }
 
@@ -264,8 +296,8 @@ export interface CreditApplicationSubmission {
   sms_consent?: boolean;
   source_url?: string;
 
-  // honeypot
-  website?: string;
+  // honeypot — deliberately obscure so Chrome autofill never targets it
+  _hp?: string;
 }
 
 /** Redacted credit-application record as stored/read from Supabase. */

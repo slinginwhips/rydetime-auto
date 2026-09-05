@@ -92,7 +92,7 @@ export default function CreditApplicationForm({
   const empStatus = watch("employment_status");
 
   const onSubmit = async (values: FormValues) => {
-    if (values.website) {
+    if (values._hp) {
       setStatus("success"); // honeypot
       return;
     }
@@ -580,9 +580,9 @@ export default function CreditApplicationForm({
         </div>
       </SectionCard>
 
-      {/* Honeypot */}
+      {/* Honeypot — name is intentionally obscure so Chrome autofill ignores it */}
       <input type="text" tabIndex={-1} autoComplete="off" aria-hidden="true"
-        className="absolute left-[-9999px] h-0 w-0 opacity-0" {...register("website")} />
+        className="absolute left-[-9999px] h-0 w-0 opacity-0" {...register("_hp")} />
 
       {status === "error" && (
         <p className="rounded-md border border-accent/40 bg-accent/5 px-4 py-3 text-sm text-accent">

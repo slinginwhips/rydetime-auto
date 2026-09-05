@@ -84,8 +84,8 @@ const creditAppSchema = z.object({
   sms_consent: z.boolean().optional(),
   source_url: z.string().trim().max(2000).optional(),
 
-  // Honeypot — real users never fill this.
-  website: z.string().optional(),
+  // Honeypot — deliberately obscure name so Chrome autofill never targets it.
+  _hp: z.string().optional(),
 })
   // Conditionally-required blocks: retired applicants have no employer, and
   // co-applicant details only matter when a co-applicant was added.
@@ -149,7 +149,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const app = parsed.data as CreditApplicationSubmission;
 
     // Honeypot tripped: pretend success, save nothing, notify no one.
-    if (app.website && app.website.trim() !== "") {
+    if (app._hp && app._hp.trim() !== "") {
       return NextResponse.json({ success: true, lead_id: null });
     }
 
