@@ -57,3 +57,8 @@ create index if not exists idx_bdc_attachments_lead on bdc_attachments (lead_id,
 insert into storage.buckets (id, name, public)
 values ('bdc-attachments', 'bdc-attachments', false)
 on conflict (id) do nothing;
+
+-- Server-only: the BDC and admin pages use the service role, which bypasses
+-- RLS. No policies = anon/authenticated keys can't read customer threads.
+alter table bdc_messages enable row level security;
+alter table bdc_attachments enable row level security;
