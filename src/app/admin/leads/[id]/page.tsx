@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import SupabaseNotice from "../../_components/SupabaseNotice";
+import BdcReply from "../../_components/BdcReply";
 import { safeQuery, adminDbReady, formatDateTime } from "../../_lib/adminData";
-import type { Lead, LeadEvent, CreditApplication } from "@/types/lead";
+import type { Lead, LeadEvent, CreditApplication, BdcMessage, BdcAttachment } from "@/types/lead";
+
+type BdcAttachmentWithUrl = BdcAttachment & { url: string | null };
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +28,7 @@ export default async function AdminLeadDetailPage({
 }) {
   const { id } = await params;
 
-  const [lead, events, creditApp] = await Promise.all([
+  const [lead, events, creditApp, messages, attachments] = await Promise.all([
     safeQuery<Lead | null>(null, async (sb) => {
       const { data, error } = await sb
         .from("leads")
@@ -52,6 +55,33 @@ export default async function AdminLeadDetailPage({
         .maybeSingle();
       if (error) throw error;
       return data as CreditApplication | null;
+    }),
+    safeQuery<BdcMessage[]>([], async (sb) => {
+      const { data, error } = await sb
+        .from("bdc_messages")
+        .select("*")
+        .eq("lead_id", id)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as BdcMessage[];
+    }),
+    safeQuery<BdcAttachmentWithUrl[]>([], async (sb) => {
+      const { data, error } = await sb
+        .from("bdc_attachments")
+        .select("*")
+        .eq("lead_id", id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      const rows = (data ?? []) as BdcAttachment[];
+      // Private bucket — mint short-lived signed URLs so the rep can view files.
+      const withUrls: BdcAttachmentWithUrl[] = [];
+      for (const a of rows) {
+        const { data: signed } = await sb.storage
+          .from("bdc-attachments")
+          .createSignedUrl(a.storage_path, 3600);
+        withUrls.push({ ...a, url: signed?.signedUrl ?? null });
+      }
+      return withUrls;
     }),
   ]);
 
@@ -92,6 +122,21 @@ export default async function AdminLeadDetailPage({
                 ? `DC pushed ${formatDateTime(lead.dc_pushed_at)}`
                 : "Not pushed to DealerCenter"}
             </span>
+            {lead.source && (
+              <span className="rounded bg-surface px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-text-secondary">
+                via {lead.source}
+              </span>
+            )}
+            {lead.bdc_status && (
+              <span className="rounded bg-surface px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-text-secondary">
+                BDC: {lead.bdc_status}
+              </span>
+            )}
+            {lead.opted_out && (
+              <span className="rounded bg-red-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-400">
+                Opted out
+              </span>
+            )}
           </div>
           <p className="mt-1 text-xs text-text-muted">
             Received {formatDateTime(lead.created_at)}
@@ -184,6 +229,81 @@ export default async function AdminLeadDetailPage({
                   </div>
                 )}
               </div>
+
+              {(messages.length > 0 || lead.reply_target) && (
+                <div className="rounded-lg border border-border-subtle bg-background-card p-6">
+                  <h2 className="text-sm font-bold text-text-primary">Conversation</h2>
+                  {messages.length === 0 ? (
+                    <p className="mt-4 text-sm text-text-muted">No messages yet.</p>
+                  ) : (
+                    <div className="mt-4 space-y-3">
+                      {messages.map((m) => {
+                        const outbound = m.direction === "outbound";
+                        return (
+                          <div key={m.id} className={`flex ${outbound ? "justify-end" : "justify-start"}`}>
+                            <div
+                              className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
+                                outbound ? "bg-accent/15" : "bg-surface"
+                              } text-text-primary`}
+                            >
+                              <p className="whitespace-pre-wrap">{m.body}</p>
+                              <p className="mt-1 text-[10px] text-text-muted">
+                                {outbound ? "BDC" : "Customer"} · {formatDateTime(m.created_at)}
+                                {outbound && !m.sent && ` · draft — not sent${m.skip_reason ? ` (${m.skip_reason})` : ""}`}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <BdcReply
+                    leadId={lead.id}
+                    channel={lead.reply_channel ?? null}
+                    disabled={Boolean(lead.opted_out) || !lead.reply_target}
+                    disabledReason={
+                      lead.opted_out
+                        ? "Customer opted out (STOP) — messaging disabled."
+                        : "No contact rail on this lead."
+                    }
+                  />
+                </div>
+              )}
+
+              {attachments.length > 0 && (
+                <div className="rounded-lg border border-border-subtle bg-background-card p-6">
+                  <h2 className="text-sm font-bold text-text-primary">
+                    Attachments{" "}
+                    <span className="text-xs font-normal text-text-muted">({attachments.length})</span>
+                  </h2>
+                  <p className="mt-1 text-xs text-text-muted">Documents the customer texted in. Links expire after 1 hour.</p>
+                  <ul className="mt-4 space-y-2">
+                    {attachments.map((a) => (
+                      <li
+                        key={a.id}
+                        className="flex items-center justify-between gap-3 rounded-md bg-surface px-3 py-2 text-sm"
+                      >
+                        <span className="min-w-0 truncate text-text-primary">
+                          {a.filename ?? a.storage_path.split("/").pop()}{" "}
+                          <span className="text-text-muted">· {a.content_type ?? "file"}</span>
+                        </span>
+                        {a.url ? (
+                          <a
+                            href={a.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="shrink-0 text-xs font-semibold text-accent hover:underline"
+                          >
+                            View →
+                          </a>
+                        ) : (
+                          <span className="shrink-0 text-xs text-text-muted">unavailable</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               {creditApp && (
                 <div className="rounded-lg border border-border-subtle bg-background-card p-6">

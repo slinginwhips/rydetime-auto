@@ -121,6 +121,11 @@ export default async function AdminLeadsPage({
                   <span className="rounded bg-surface px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent">
                     {lead.lead_type}
                   </span>
+                  {lead.source && (
+                    <span className="mt-1 block text-[10px] uppercase tracking-wider text-text-muted">
+                      via {lead.source}
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-xs text-text-secondary">
                   {lead.phone && <p>{lead.phone}</p>}

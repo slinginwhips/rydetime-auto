@@ -52,6 +52,48 @@ export async function sendEmailTo(
   }
 }
 
+/**
+ * Send an SMS to an ARBITRARY recipient via Twilio (e.g. a customer the BDC is
+ * texting), returning the Twilio Message SID on success. This differs from
+ * DefaultNotificationProvider.sendSms, which only ever texts the dealership's
+ * NOTIFICATION_PHONE. Returns { ok:false } (and logs) when Twilio is
+ * unconfigured, so callers never mistake a dropped text for a delivery.
+ */
+export async function sendSmsTo(
+  to: string,
+  message: string
+): Promise<{ ok: boolean; sid?: string }> {
+  const sid = process.env.TWILIO_ACCOUNT_SID;
+  const token = process.env.TWILIO_AUTH_TOKEN;
+  const from = process.env.TWILIO_FROM_NUMBER;
+  if (!sid || !token || !from || sid === "placeholder") {
+    console.log(`[notification:sms] (Twilio not configured) to=${to}\n${message}`);
+    return { ok: false };
+  }
+  try {
+    const res = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: "Basic " + Buffer.from(`${sid}:${token}`).toString("base64"),
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({ From: from, To: to, Body: message }),
+      }
+    );
+    if (!res.ok) {
+      console.error(`[notification:sms] Twilio returned ${res.status}: ${await res.text()}`);
+      return { ok: false };
+    }
+    const data = (await res.json().catch(() => null)) as { sid?: string } | null;
+    return { ok: true, sid: data?.sid };
+  } catch (err) {
+    console.error("[notification:sms] sendSmsTo failed", err);
+    return { ok: false };
+  }
+}
+
 class DefaultNotificationProvider implements NotificationProvider {
   async sendEmail(payload: NotificationPayload): Promise<boolean> {
     const to = process.env.NOTIFICATION_EMAIL;
