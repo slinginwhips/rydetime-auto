@@ -316,5 +316,14 @@ export function parseInboundLeadFromEmail(email: ParsedEmail): ParsedInboundLead
 
 /** Parse a raw .eml / MIME string into a normalized lead. */
 export function parseInboundLead(rawEmail: string): ParsedInboundLead {
-  return parseInboundLeadFromEmail(parseEmail(rawEmail));
+  const email = parseEmail(rawEmail);
+  const lead = parseInboundLeadFromEmail(email);
+  // Sources without their own lead id (Carfax, OfferUp) still need a stable
+  // dedupe key, or a webhook retry would text the customer twice. Message-ID
+  // survives Outlook redirects and provider retries.
+  const messageId = email.headers["message-id"]?.trim();
+  if (!lead.external_id && messageId) {
+    return { ...lead, external_id: `msgid:${messageId.slice(0, 200)}` };
+  }
+  return lead;
 }
