@@ -128,6 +128,45 @@ export async function addEvent(lead_id: string, event_type: string, notes?: stri
   await supabase.from("lead_events").insert({ lead_id, event_type, notes: notes ?? null });
 }
 
+/**
+ * File an appointment the customer agreed to in the BDC thread. Always saved
+ * UNCONFIRMED — Ryan or Dawn confirms it on the Appointments screen, so the
+ * bot can never fill the calendar on its own.
+ */
+export async function createAppointmentRequest(input: {
+  lead_id: string;
+  vehicle_id?: string | null;
+  preferred_date: string;
+  preferred_time: string;
+  notes?: string | null;
+}): Promise<boolean> {
+  if (!hasDb()) return false;
+  const { error } = await getSupabaseAdmin().from("appointments").insert({
+    lead_id: input.lead_id,
+    vehicle_id: input.vehicle_id ?? null,
+    preferred_date: input.preferred_date,
+    preferred_time: input.preferred_time,
+    confirmed: false,
+    notes: input.notes ?? "Booked by the BDC from the text thread — needs confirming.",
+  });
+  if (error) {
+    console.error("[bdc/store] appointment insert failed:", error.message);
+    return false;
+  }
+  return true;
+}
+
+/** Current BDC status for a lead ("manual" means a human took the wheel). */
+export async function getBdcStatus(lead_id: string): Promise<string | null> {
+  if (!hasDb()) return null;
+  const { data } = await getSupabaseAdmin()
+    .from("leads")
+    .select("bdc_status")
+    .eq("id", lead_id)
+    .maybeSingle();
+  return (data as { bdc_status?: string } | null)?.bdc_status ?? null;
+}
+
 export async function setBdcStatus(lead_id: string, status: string): Promise<void> {
   if (!hasDb()) return;
   await getSupabaseAdmin().from("leads").update({ bdc_status: status }).eq("id", lead_id);

@@ -61,7 +61,9 @@ export async function POST(
     provider_sid: result.providerSid ?? null,
   });
   await addEvent(id, "manual_reply", result.ok ? "sent by rep" : `not sent: ${result.skipped}`);
-  if (result.ok) await setBdcStatus(id, "contacted");
+  // A human is in the conversation now — pause the bot on this lead so the two
+  // never talk over each other. "Hand back to BDC" in the console resumes it.
+  if (result.ok) await setBdcStatus(id, "manual");
 
   return NextResponse.json({ ok: result.ok, skipped: result.skipped });
 }

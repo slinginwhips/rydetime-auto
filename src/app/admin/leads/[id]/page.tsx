@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import SupabaseNotice from "../../_components/SupabaseNotice";
 import BdcReply from "../../_components/BdcReply";
+import BdcHandBack from "../../_components/BdcHandBack";
 import { safeQuery, adminDbReady, formatDateTime } from "../../_lib/adminData";
 import type { Lead, LeadEvent, CreditApplication, BdcMessage, BdcAttachment } from "@/types/lead";
 
@@ -129,10 +130,16 @@ export default async function AdminLeadDetailPage({
                 via {lead.source}
               </span>
             )}
-            {lead.bdc_status && (
-              <span className="rounded bg-surface px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-text-secondary">
-                BDC: {lead.bdc_status}
+            {lead.bdc_status === "needs_human" ? (
+              <span className="rounded bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                Needs you
               </span>
+            ) : (
+              lead.bdc_status && (
+                <span className="rounded bg-surface px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-text-secondary">
+                  BDC: {lead.bdc_status}
+                </span>
+              )
             )}
             {lead.opted_out && (
               <span className="rounded bg-red-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-400">
@@ -269,6 +276,12 @@ export default async function AdminLeadDetailPage({
                         : "No contact rail on this lead."
                     }
                   />
+                  {!lead.opted_out && lead.reply_target && (
+                    <BdcHandBack
+                      leadId={lead.id}
+                      paused={lead.bdc_status === "manual" || lead.bdc_status === "needs_human"}
+                    />
+                  )}
                 </div>
               )}
 

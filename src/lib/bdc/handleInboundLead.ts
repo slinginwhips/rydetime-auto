@@ -10,6 +10,7 @@
 import { parseInboundLead } from "./parseInboundLead";
 import { draftFirstTouch } from "./replyEngine";
 import { dispatchReply } from "./dispatch";
+import { applyDraftTags } from "./applyDraftTags";
 import { findOrCreateLead, logMessage, addEvent, setBdcStatus, hasDb } from "./store";
 import { sendNotification } from "@/lib/notificationProvider";
 import type { ParsedInboundLead } from "@/types/bdc";
@@ -77,9 +78,11 @@ export async function handleInboundLead(
     provider_sid: result.providerSid ?? null,
   });
 
+  await applyDraftTags(rec.id, draft, parsed, null);
+
   if (result.ok) {
     await addEvent(rec.id, "bdc_contacted", `channel=${draft.channel}`);
-    await setBdcStatus(rec.id, "contacted");
+    if (!draft.needs_human) await setBdcStatus(rec.id, "contacted");
     return { status: "sent", lead_id: rec.id, parsed };
   }
 

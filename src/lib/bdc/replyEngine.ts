@@ -11,6 +11,7 @@ import { getAnthropic, AI_MODEL, isAIConfigured } from "@/lib/ai";
 import { getAllActiveVehicles } from "@/lib/vehicles";
 import { matchVehiclesToQuery, formatVehicleKnowledge, retrieveKnowledge } from "@/lib/chatRetrieval";
 import { DEALERSHIP } from "@/lib/dealership";
+import { hoursContext, isOpenAt, isWithinHours, nextOpenDescription } from "./hours";
 import type { Vehicle } from "@/types/vehicle";
 import type { ParsedInboundLead, ReplyChannel } from "@/types/bdc";
 
@@ -27,6 +28,50 @@ export interface DraftedReply {
   /** The inventory vehicle we tied the lead to, if any. */
   matched_vehicle: Vehicle | null;
   model: string;
+  /** Parsed from the model's control tags (stripped from the body). */
+  appointment?: { date: string; time: string } | null;
+  needs_human?: string | null;
+}
+
+/**
+ * The model may end a message with control tags, which are stripped before the
+ * customer ever sees them:
+ *   [[APPT: YYYY-MM-DD HH:MM]]  — the customer agreed to a time
+ *   [[NEEDS_HUMAN: reason]]     — it could not answer and promised a callback
+ */
+export interface ReplyTags {
+  appointment: { date: string; time: string } | null;
+  needsHuman: string | null;
+}
+
+export function extractTags(raw: string): { body: string; tags: ReplyTags } {
+  const tags: ReplyTags = { appointment: null, needsHuman: null };
+
+  const appt = /\[\[APPT:\s*(\d{4}-\d{2}-\d{2})\s+(\d{1,2}:\d{2})\s*\]\]/i.exec(raw);
+  if (appt) tags.appointment = { date: appt[1], time: appt[2] };
+
+  const human = /\[\[NEEDS_HUMAN:\s*([^\]]*)\]\]/i.exec(raw);
+  if (human) tags.needsHuman = human[1].trim() || "unspecified";
+
+  const body = raw
+    .replace(/\[\[(APPT|NEEDS_HUMAN):[^\]]*\]\]/gi, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return { body, tags };
+}
+
+
+/**
+ * A time the model tagged only counts if we are actually open then — it has
+ * the hours in its prompt, but a booked-when-closed appointment would strand
+ * a customer at a locked door.
+ */
+function validAppointment(
+  appt: { date: string; time: string } | null
+): { date: string; time: string } | null {
+  if (!appt) return null;
+  return isWithinHours(appt.date, appt.time) ? appt : null;
 }
 
 /** Every A2P first-touch SMS ends with this — business ID lives in the body. */
@@ -52,7 +97,25 @@ Let them know, naturally and briefly, that they can speed up approval by texting
 - Proof of residence — a phone, electric, or water bill, or a bank statement, dated within the last 30 days.
 Keep it light — mention it as a helpful next step, not a checklist dump.
 
-Output ONLY the message text to send. No preamble, no quotes, no labels.`;
+
+WHEN WE ARE CLOSED (the RIGHT NOW block tells you):
+- Never imply someone is sitting here waiting. Don't say "call us now" or "come on by" as if we're open.
+- Answer what you can from the facts, then point at the next open time, e.g. "we open tomorrow at 10".
+- You can still book them in: ask for a time on a day we're open.
+
+APPOINTMENTS:
+- If they agree to a time inside our hours, confirm it warmly and add this tag on its own line at the very end: [[APPT: YYYY-MM-DD HH:MM]] (24-hour time, dealership local). The tag is stripped before sending — the customer never sees it.
+- Only tag a time we are actually open. Never invent a time they didn't agree to.
+
+WHEN YOU CANNOT ANSWER (trade values, "can you do $X", payoff/payment amounts, approval odds, anything needing Ryan's decision):
+- Do NOT guess and do NOT quote numbers. Tell them you'll get an answer from the team — if we're open, "shortly"; if closed, "first thing when we open at 10".
+- Never promise a person is available right this second.
+- Then add this tag on its own line at the very end: [[NEEDS_HUMAN: short reason]] — also stripped before sending.
+
+CREDIT APPLICATION:
+- When financing comes up (or they ask about approval/payments), you can send them the application link: ${DEALERSHIP.siteUrl}/finance
+
+Output ONLY the message text to send (plus any tag lines). No preamble, no quotes, no labels.`;
 
 /** Find the inventory vehicle this lead is about, by stock #, VIN, then title. */
 function resolveVehicle(lead: ParsedInboundLead, inventory: Vehicle[]): Vehicle | null {
@@ -94,6 +157,7 @@ function customerLabel(lead: ParsedInboundLead): string {
 function buildLeadContext(lead: ParsedInboundLead, vehicle: Vehicle | null, link: string | null): string {
   const hours = DEALERSHIP.hours.map((h) => `${h.days}: ${h.hours}`).join(" | ");
   const parts: string[] = [
+    hoursContext(),
     `DEALERSHIP: ${DEALERSHIP.name}, ${DEALERSHIP.address.full}. Phone: ${DEALERSHIP.phone}. Hours: ${hours}.`,
     `LEAD SOURCE: ${lead.source}`,
     `CUSTOMER NAME: ${customerLabel(lead)}`,
@@ -205,14 +269,18 @@ export async function draftFirstTouch(lead: ParsedInboundLead): Promise<DraftedR
     .join("")
     .trim();
 
+  const { body, tags } = extractTags(raw);
+
   return {
     channel: plan.channel,
     target: plan.target,
     subject: plan.subject,
-    body: applySmsCompliance(raw, plan.channel),
+    body: applySmsCompliance(body, plan.channel),
     link: plan.link,
     matched_vehicle: plan.matched_vehicle,
     model: AI_MODEL,
+    appointment: validAppointment(tags.appointment),
+    needs_human: tags.needsHuman,
   };
 }
 
@@ -238,7 +306,25 @@ HARD RULES:
 - Do NOT re-introduce yourself every message, do NOT add a signature or footer, and do NOT include "Reply STOP".
 - If financing/credit is in play, you may remind them they can text in proof of income (paystub, 3 months of bank statements, SS award letter, or child-support letter) or proof of residence (a utility bill or bank statement dated within 30 days), and that it goes right onto their file.
 
-Output ONLY the next message to send. No preamble, no quotes, no labels.`;
+
+WHEN WE ARE CLOSED (the RIGHT NOW block tells you):
+- Never imply someone is sitting here waiting. Don't say "call us now" or "come on by" as if we're open.
+- Answer what you can from the facts, then point at the next open time, e.g. "we open tomorrow at 10".
+- You can still book them in: ask for a time on a day we're open.
+
+APPOINTMENTS:
+- If they agree to a time inside our hours, confirm it warmly and add this tag on its own line at the very end: [[APPT: YYYY-MM-DD HH:MM]] (24-hour time, dealership local). The tag is stripped before sending — the customer never sees it.
+- Only tag a time we are actually open. Never invent a time they didn't agree to.
+
+WHEN YOU CANNOT ANSWER (trade values, "can you do $X", payoff/payment amounts, approval odds, anything needing Ryan's decision):
+- Do NOT guess and do NOT quote numbers. Tell them you'll get an answer from the team — if we're open, "shortly"; if closed, "first thing when we open at 10".
+- Never promise a person is available right this second.
+- Then add this tag on its own line at the very end: [[NEEDS_HUMAN: short reason]] — also stripped before sending.
+
+CREDIT APPLICATION:
+- When financing comes up (or they ask about approval/payments), you can send them the application link: ${DEALERSHIP.siteUrl}/finance
+
+Output ONLY the next message to send (plus any tag lines). No preamble, no quotes, no labels.`;
 
 /**
  * Draft the next reply in an ongoing conversation, grounded in the thread so
@@ -275,11 +361,13 @@ export async function draftFollowUp(
     ],
   });
 
-  const body = response.content
+  const raw = response.content
     .filter((b): b is Extract<typeof b, { type: "text" }> => b.type === "text")
     .map((b) => b.text)
     .join("")
     .trim();
+
+  const { body, tags } = extractTags(raw);
 
   return {
     channel: lead.reply_channel,
@@ -289,5 +377,7 @@ export async function draftFollowUp(
     link,
     matched_vehicle: vehicle,
     model: AI_MODEL,
+    appointment: validAppointment(tags.appointment),
+    needs_human: tags.needsHuman,
   };
 }

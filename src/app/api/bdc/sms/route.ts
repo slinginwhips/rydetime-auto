@@ -21,9 +21,11 @@ import {
   saveAttachmentFromUrl,
   getBdcLead,
   getThread,
+  getBdcStatus,
 } from "@/lib/bdc/store";
 import { draftFollowUp } from "@/lib/bdc/replyEngine";
 import { dispatchReply } from "@/lib/bdc/dispatch";
+import { applyDraftTags } from "@/lib/bdc/applyDraftTags";
 import { isAIConfigured } from "@/lib/ai";
 
 export const runtime = "nodejs";
@@ -124,12 +126,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // it — gated by the SAME arm switch as first-touch (dispatchReply). When
     // disarmed, the draft is filed to the thread (sent=false) for review.
     try {
-      if (isAIConfigured()) {
+      // A human who replies takes the wheel (status "manual"); the bot stops
+      // auto-answering that customer until it is handed back in the console.
+      const status = await getBdcStatus(lead.id);
+      if (isAIConfigured() && status !== "manual") {
         const ctx = await getBdcLead(lead.id);
         if (ctx && !ctx.opted_out) {
           const history = await getThread(lead.id); // includes the reply we just logged
           const draft = await draftFollowUp(ctx, history);
           const result = await dispatchReply(draft);
+          await applyDraftTags(lead.id, draft, ctx, body || null);
           await logMessage({
             lead_id: lead.id,
             direction: "outbound",

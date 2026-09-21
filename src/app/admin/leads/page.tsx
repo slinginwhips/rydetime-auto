@@ -126,6 +126,11 @@ export default async function AdminLeadsPage({
                       via {lead.source}
                     </span>
                   )}
+                  {lead.bdc_status === "needs_human" && (
+                    <span className="mt-1 block text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                      Needs you
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-xs text-text-secondary">
                   {lead.phone && <p>{lead.phone}</p>}
