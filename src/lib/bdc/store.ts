@@ -72,6 +72,37 @@ export async function findOrCreateLead(lead: ParsedInboundLead): Promise<LeadRec
   return { id: (inserted as { id: string }).id, isNew: true, opted_out: false };
 }
 
+/**
+ * A stranger texted the dealership line. Create a lead so the message lands
+ * somewhere a human can see it, rather than vanishing. Name is unknown until
+ * they tell us, so the thread carries the number.
+ */
+export async function createLeadFromText(phone: string, firstMessage: string): Promise<string | null> {
+  if (!hasDb() || !phone) return null;
+  const { data, error } = await getSupabaseAdmin()
+    .from("leads")
+    .insert({
+      first_name: "Text-in",
+      last_name: null,
+      phone,
+      message: firstMessage || null,
+      lead_type: "inquiry",
+      source: "text_in",
+      external_id: `text:${phone}`,
+      reply_channel: "sms",
+      reply_target: phone,
+      bdc_status: "new",
+      dc_pushed: false,
+    })
+    .select("id")
+    .single();
+  if (error || !data) {
+    console.error("[bdc/store] text-in lead insert failed:", error?.message);
+    return null;
+  }
+  return (data as { id: string }).id;
+}
+
 /** Find an existing lead by the phone/email/relay that just contacted us. */
 export async function findLeadByContact(contact: string): Promise<{ id: string; opted_out: boolean } | null> {
   if (!hasDb() || !contact) return null;

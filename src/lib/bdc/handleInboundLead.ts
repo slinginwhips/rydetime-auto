@@ -56,20 +56,33 @@ export async function handleInboundLead(
     return { status: "opted_out", lead_id: rec.id, parsed };
   }
 
+  return runFirstTouch(rec.id, parsed, opts);
+}
+
+/**
+ * Draft + (maybe) send the first message for a lead row that already exists.
+ * Shared by marketplace ingestion and website form leads so both paths get the
+ * same guardrails, tags, and thread logging.
+ */
+export async function runFirstTouch(
+  leadId: string,
+  parsed: ParsedInboundLead,
+  opts: { dryRun?: boolean } = {}
+): Promise<HandleResult> {
   // Draft the first touch. If drafting fails, alert a human rather than sending nothing silently.
   let draft;
   try {
     draft = await draftFirstTouch(parsed);
   } catch (err) {
-    await addEvent(rec.id, "bdc_draft_failed", err instanceof Error ? err.message : "unknown");
+    await addEvent(leadId, "bdc_draft_failed", err instanceof Error ? err.message : "unknown");
     await notifyHuman(parsed, "BDC could not draft a reply — needs manual follow-up.");
-    return { status: "error", lead_id: rec.id, parsed, detail: "draft failed" };
+    return { status: "error", lead_id: leadId, parsed, detail: "draft failed" };
   }
 
   const result = await dispatchReply(draft, opts);
 
   await logMessage({
-    lead_id: rec.id,
+    lead_id: leadId,
     direction: "outbound",
     channel: draft.channel,
     body: draft.body,
@@ -78,17 +91,17 @@ export async function handleInboundLead(
     provider_sid: result.providerSid ?? null,
   });
 
-  await applyDraftTags(rec.id, draft, parsed, null);
+  await applyDraftTags(leadId, draft, parsed, null);
 
   if (result.ok) {
-    await addEvent(rec.id, "bdc_contacted", `channel=${draft.channel}`);
-    if (!draft.needs_human) await setBdcStatus(rec.id, "contacted");
-    return { status: "sent", lead_id: rec.id, parsed };
+    await addEvent(leadId, "bdc_contacted", `channel=${draft.channel}`);
+    if (!draft.needs_human) await setBdcStatus(leadId, "contacted");
+    return { status: "sent", lead_id: leadId, parsed };
   }
 
   // Drafted but not sent (disarmed / dry-run / send failure) — filed for review.
-  await addEvent(rec.id, "bdc_draft_saved", `not sent: ${result.skipped}`);
-  return { status: "drafted", lead_id: rec.id, parsed, detail: result.skipped };
+  await addEvent(leadId, "bdc_draft_saved", `not sent: ${result.skipped}`);
+  return { status: "drafted", lead_id: leadId, parsed, detail: result.skipped };
 }
 
 async function notifyHuman(parsed: ParsedInboundLead, why: string): Promise<void> {

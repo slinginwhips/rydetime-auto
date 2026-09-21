@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { z } from "zod";
 import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import { getLeadProvider } from "@/lib/leadProvider";
 import { sendNotification } from "@/lib/notificationProvider";
 import { getVehicleById } from "@/lib/vehicles";
+import { bdcHandleWebsiteLead } from "@/lib/bdc/websiteLead";
 import type { DCLead } from "@/types/dealercenter";
 import type { Vehicle } from "@/types/vehicle";
 
@@ -156,6 +157,26 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     await notify();
+
+    // Hand the lead to the BDC for its first touch — phone first, email only
+    // when there's no number. Runs after the response so the customer's form
+    // never waits on the model; sending is still gated by the arm switch.
+    after(() =>
+      bdcHandleWebsiteLead({
+        leadId,
+        first_name: body.first_name,
+        last_name: body.last_name ?? null,
+        email: body.email || null,
+        phone: body.phone ?? null,
+        message: body.message ?? null,
+        chat_summary: body.chat_summary ?? null,
+        lead_type: body.lead_type,
+        vehicle,
+        vin: dcLead.vin ?? null,
+        stock_number: dcLead.stock_number ?? null,
+        source_url: body.source_url ?? null,
+      })
+    );
 
     return NextResponse.json({ success: true, lead_id: leadId });
   } catch (err) {

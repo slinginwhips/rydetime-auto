@@ -14,6 +14,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHmac } from "node:crypto";
 import {
   findLeadByContact,
+  createLeadFromText,
   logMessage,
   addEvent,
   setOptedOut,
@@ -77,20 +78,28 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const body = (params.Body || "").trim();
     const numMedia = parseInt(params.NumMedia || "0", 10) || 0;
 
-    const lead = from ? await findLeadByContact(from) : null;
+    const matched = from ? await findLeadByContact(from) : null;
 
     // 1. Opt-out — honor it even if we can't match a lead (best effort).
     if (OPT_OUT_WORDS.has(body.toUpperCase())) {
-      if (lead) {
-        await setOptedOut(lead.id);
-        await logMessage({ lead_id: lead.id, direction: "inbound", channel: "sms", body });
-        await addEvent(lead.id, "customer_opted_out", "STOP received");
+      if (matched) {
+        await setOptedOut(matched.id);
+        await logMessage({ lead_id: matched.id, direction: "inbound", channel: "sms", body });
+        await addEvent(matched.id, "customer_opted_out", "STOP received");
       }
       return twiml();
     }
 
-    // No matching lead — nothing to thread against. (Could be a brand-new number.)
-    if (!lead) return twiml();
+    // Someone texting the dealership number cold — no lead exists yet. Create
+    // one so the message is never lost; the follow-up engine below then answers
+    // it like any other thread (still gated by the auto-send switch).
+    let lead = matched;
+    if (!lead) {
+      const createdId = await createLeadFromText(from, body);
+      if (!createdId) return twiml();
+      lead = { id: createdId, opted_out: false };
+      await addEvent(createdId, "bdc_lead_created", "inbound text from an unknown number");
+    }
 
     // 2. Thread the inbound message.
     const messageId = await logMessage({

@@ -10,6 +10,8 @@ export type LeadSource =
   | "carfax"
   | "offerup"
   | "credit_acceptance"
+  /** Our own site forms (contact, test drive, trade, finance, chat, hold). */
+  | "website"
   | "unknown";
 
 /**
