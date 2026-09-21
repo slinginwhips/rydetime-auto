@@ -98,7 +98,13 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         contactable: lead.contactable,
         reply_channel: lead.reply_channel,
         external_id: lead.external_id,
+        vehicle_title: lead.vehicle_title,
+        vin: lead.vin,
+        stock_number: lead.stock_number,
         warnings: lead.warnings,
+        // ?body=1 shows what the email actually says, so a parser that missed
+        // the car (or anything else) can be fixed from the real layout.
+        ...(url.searchParams.get("body") ? { email_text: parseEmail(raw).text.slice(0, 3500) } : {}),
       };
 
       if (ingestId) {
