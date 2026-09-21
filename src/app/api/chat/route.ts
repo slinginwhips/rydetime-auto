@@ -201,6 +201,12 @@ function captureChatLead(
       const recent =
         full.length > 9000 ? `…earlier messages trimmed…\n\n${full.slice(-9000)}` : full;
 
+      // No phone and no email = nobody to call back, so it is not a lead. The
+      // transcript is already saved against the chat session (with the vehicle
+      // they were viewing) and readable on the DMS "Website" page; it becomes
+      // a lead the moment they leave contact details.
+      if (!phone && !email) return;
+
       let leadId: string | null = null;
       // Only worth a notification once somebody can actually be called back.
       // The trigger fires on the opening "I'd like to get pre-approved", which

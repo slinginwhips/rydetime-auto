@@ -41,7 +41,11 @@ export default async function AdminLeadsPage({
     if (leadType) q = q.eq("lead_type", leadType);
     const { data, error } = await q;
     if (error) throw error;
-    return (data ?? []) as Lead[];
+    // Old anonymous chat visitors (no phone, no email) can't be contacted, so
+    // they aren't leads. Their transcripts still live on the Chat page.
+    return ((data ?? []) as Lead[]).filter(
+      (l) => !(l.lead_type === "chat" && !l.phone && !l.email)
+    );
   });
 
   const tabClass = (active: boolean) =>
