@@ -53,7 +53,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   };
 
   // 1. Can we even list received emails with this key?
-  const list = await resendGet("/emails/receiving?limit=10");
+  const limit = Math.min(Number(url.searchParams.get("limit")) || 3, 10);
+  const list = await resendGet(`/emails/receiving?limit=${limit}`);
   if (!list.ok) {
     return NextResponse.json(
       { env, step: "list_received", ok: false, status: list.status, detail: list.body },
@@ -61,7 +62,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const rows = ((list.body as { data?: { id: string; subject?: string; from?: string }[] })?.data ?? []).slice(0, 10);
+  const rows = ((list.body as { data?: { id: string; subject?: string; from?: string }[] })?.data ?? []).slice(0, limit);
 
   const ids = ingestId ? [ingestId] : rows.map((r) => r.id);
   const results: unknown[] = [];
