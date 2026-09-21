@@ -9,6 +9,7 @@
  */
 import { getAnthropic, AI_MODEL, isAIConfigured } from "@/lib/ai";
 import { getAllActiveVehicles } from "@/lib/vehicles";
+import { isPlaceholderName } from "./names";
 import { matchVehiclesToQuery, formatVehicleKnowledge, retrieveKnowledge } from "@/lib/chatRetrieval";
 import { DEALERSHIP } from "@/lib/dealership";
 import { hoursContext, isOpenAt, isWithinHours, nextOpenDescription } from "./hours";
@@ -31,6 +32,8 @@ export interface DraftedReply {
   /** Parsed from the model's control tags (stripped from the body). */
   appointment?: { date: string; time: string } | null;
   needs_human?: string | null;
+  /** A name the customer gave while filed as Unknown, from the [[NAME:]] tag. */
+  customer_name?: string | null;
 }
 
 /**
@@ -42,10 +45,25 @@ export interface DraftedReply {
 export interface ReplyTags {
   appointment: { date: string; time: string } | null;
   needsHuman: string | null;
+  /** A name the customer gave us while we had them filed as "Unknown". */
+  name: string | null;
+}
+
+/**
+ * Em and en dashes are the tell-tale sign of AI-written text, so a customer
+ * never sees one: the prompts ask the model not to use them, and this cleans up
+ * whatever slips through ("10–6" becomes "10-6", " — " becomes a comma).
+ */
+export function stripDashes(text: string): string {
+  return text
+    .replace(/(\d)\s*[–—]\s*(\d)/g, "$1-$2")
+    .replace(/(\w)[–—](\w)/g, "$1-$2")
+    .replace(/\s*[—–]\s*/g, ", ")
+    .replace(/,\s*,/g, ",");
 }
 
 export function extractTags(raw: string): { body: string; tags: ReplyTags } {
-  const tags: ReplyTags = { appointment: null, needsHuman: null };
+  const tags: ReplyTags = { appointment: null, needsHuman: null, name: null };
 
   const appt = /\[\[APPT:\s*(\d{4}-\d{2}-\d{2})\s+(\d{1,2}:\d{2})\s*\]\]/i.exec(raw);
   if (appt) tags.appointment = { date: appt[1], time: appt[2] };
@@ -53,10 +71,15 @@ export function extractTags(raw: string): { body: string; tags: ReplyTags } {
   const human = /\[\[NEEDS_HUMAN:\s*([^\]]*)\]\]/i.exec(raw);
   if (human) tags.needsHuman = human[1].trim() || "unspecified";
 
-  const body = raw
-    .replace(/\[\[(APPT|NEEDS_HUMAN):[^\]]*\]\]/gi, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  const nameTag = /\[\[NAME:\s*([^\]]*)\]\]/i.exec(raw);
+  if (nameTag) tags.name = nameTag[1].trim() || null;
+
+  const body = stripDashes(
+    raw
+      .replace(/\[\[(APPT|NEEDS_HUMAN|NAME):[^\]]*\]\]/gi, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim()
+  );
 
   return { body, tags };
 }
@@ -85,7 +108,10 @@ HARD RULES:
 - Use ONLY the facts provided (dealership info, the matched vehicle, knowledge). NEVER invent vehicle details, mileage, history, or availability.
 - NEVER promise or guarantee financing approval, a rate, or a monthly payment. You can say we work with many lenders and can likely help.
 - The website's payment calculator is only a math tool — customers sometimes treat it like they get to pick their own payment (especially $0 down). If they quote a calculator number or ask if it's guaranteed, let them down nicely and plainly, in the same message Ryan would give: it's just a calculator, that isn't what your payment will be; the real payment depends on their approval, credit and income, and some down payment usually helps. Then move forward (credit app or a quick call). Don't lecture, and don't warn about it when they simply ask for an estimate.
-- NEVER ask for SSN, date of birth, or full financial details.
+- NEVER ask for SSN, date of birth, or full financial details over text.
+- STYLE: never use em dashes or en dashes. Use a comma, a period, or a plain hyphen instead. Write like a person texting, not like an AI.
+- HOURS: don't recite the hours by default. If we're open and they can come in today, just say so (or skip it). Give the hours only when they can't make it today (we're closed, or they say they can't come), so they can pick another day.
+- NAME: when CUSTOMER NAME below is Unknown and the customer tells you their name, add this tag on its own line at the very end: [[NAME: First Last]] (stripped before sending). Only use a name they actually gave. Never tag a name we already have.
 - If the customer's car is known, reference it specifically by year/make/model.
 - If NO specific car is known, warmly ask which vehicle they were looking at (or what they're shopping for) and point them to our inventory to browse.
 - Always identify yourself as being with RydeTime Auto in the first message.
@@ -154,7 +180,8 @@ function channelGuidance(channel: ReplyChannel): string {
 const INVENTORY_LINE_CAP = 75;
 
 function customerLabel(lead: ParsedInboundLead): string {
-  return [lead.first_name, lead.last_name].filter(Boolean).join(" ") || "there";
+  if (isPlaceholderName(lead.first_name)) return "Unknown";
+  return [lead.first_name, lead.last_name].filter(Boolean).join(" ");
 }
 
 /** Build the lead + inventory context block for the model. */
@@ -170,7 +197,7 @@ function buildLeadContext(
     hoursContext(),
     `DEALERSHIP: ${DEALERSHIP.name}, ${DEALERSHIP.address.full}. Phone: ${DEALERSHIP.phone}. Hours: ${hours}.`,
     `LEAD SOURCE: ${lead.source}`,
-    `CUSTOMER NAME: ${customerLabel(lead)}`,
+    `CUSTOMER NAME: ${customerLabel(lead)}${customerLabel(lead) === "Unknown" ? " (they haven't told us yet: don't use a name, and you may ask for it naturally)" : ""}`,
     lead.message ? `WHAT THEY SAID / LEAD NOTE: ${lead.message}` : "The lead carried no message from the customer.",
   ];
 
@@ -310,6 +337,7 @@ export async function draftFirstTouch(lead: ParsedInboundLead): Promise<DraftedR
     model: AI_MODEL,
     appointment: validAppointment(tags.appointment),
     needs_human: tags.needsHuman,
+    customer_name: tags.name,
   };
 }
 
@@ -332,6 +360,9 @@ HARD RULES:
 - NEVER promise or guarantee financing approval, a rate, or a monthly payment. You can say we work with many lenders and can likely help.
 - The website's payment calculator is only a math tool — customers sometimes treat it like they get to pick their own payment (especially $0 down). If they quote a calculator number or ask if it's guaranteed, let them down nicely and plainly, in the same message Ryan would give: it's just a calculator, that isn't what your payment will be; the real payment depends on their approval, credit and income, and some down payment usually helps. Then move forward (credit app or a quick call). Don't lecture, and don't warn about it when they simply ask for an estimate.
 - NEVER ask for SSN, date of birth, or full financial details over text.
+- STYLE: never use em dashes or en dashes. Use a comma, a period, or a plain hyphen instead. Write like a person texting, not like an AI.
+- HOURS: don't recite the hours by default. If we're open and they can come in today, just say so (or skip it). Give the hours only when they can't make it today (we're closed, or they say they can't come), so they can pick another day.
+- NAME: when CUSTOMER NAME below is Unknown and the customer tells you their name, add this tag on its own line at the very end: [[NAME: First Last]] (stripped before sending). Only use a name they actually gave. Never tag a name we already have.
 - If they ask something you don't have the facts for, say you'll check with the team / invite them to call ${DEALERSHIP.phone}.
 - Do NOT re-introduce yourself every message, do NOT add a signature or footer, and do NOT include "Reply STOP".
 - If financing/credit is in play, you may remind them they can text in proof of income (paystub, 3 months of bank statements, SS award letter, or child-support letter) or proof of residence (a utility bill or bank statement dated within 30 days), and that it goes right onto their file.
@@ -417,5 +448,6 @@ export async function draftFollowUp(
     model: AI_MODEL,
     appointment: validAppointment(tags.appointment),
     needs_human: tags.needsHuman,
+    customer_name: tags.name,
   };
 }

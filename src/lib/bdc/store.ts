@@ -5,6 +5,7 @@
  * throws just because the DB is absent in a given environment.
  */
 import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
+import { isPlaceholderName } from "./names";
 import type { ParsedInboundLead, ReplyChannel } from "@/types/bdc";
 import type { LeadType } from "@/types/lead";
 import type { ThreadTurn } from "./replyEngine";
@@ -47,7 +48,7 @@ export async function findOrCreateLead(lead: ParsedInboundLead): Promise<LeadRec
   const { data: inserted, error } = await supabase
     .from("leads")
     .insert({
-      first_name: lead.first_name ?? "Marketplace Lead",
+      first_name: lead.first_name ?? "Unknown",
       last_name: lead.last_name,
       email: lead.email,
       phone: lead.phone,
@@ -82,7 +83,7 @@ export async function createLeadFromText(phone: string, firstMessage: string): P
   const { data, error } = await getSupabaseAdmin()
     .from("leads")
     .insert({
-      first_name: "Text-in",
+      first_name: "Unknown",
       last_name: null,
       phone,
       message: firstMessage || null,
@@ -101,6 +102,19 @@ export async function createLeadFromText(phone: string, firstMessage: string): P
     return null;
   }
   return (data as { id: string }).id;
+}
+
+/**
+ * The customer told us their name. Only ever fills a lead that is still
+ * "Unknown", so a real name (or a human's edit) is never overwritten.
+ */
+export async function setLeadNameIfUnknown(leadId: string, first: string, last: string | null): Promise<boolean> {
+  if (!hasDb()) return false;
+  const supabase = getSupabaseAdmin();
+  const { data } = await supabase.from("leads").select("first_name").eq("id", leadId).maybeSingle();
+  if (!data || !isPlaceholderName((data as { first_name: string | null }).first_name)) return false;
+  const { error } = await supabase.from("leads").update({ first_name: first, last_name: last }).eq("id", leadId);
+  return !error;
 }
 
 /** Find an existing lead by the phone/email/relay that just contacted us. */

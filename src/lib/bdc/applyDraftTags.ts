@@ -7,7 +7,8 @@
  * the two paths can never drift. Best-effort: a failure here must never stop
  * the customer's message from going out.
  */
-import { createAppointmentRequest, addEvent, setBdcStatus } from "./store";
+import { createAppointmentRequest, addEvent, setBdcStatus, setLeadNameIfUnknown } from "./store";
+import { cleanPersonName, isPlaceholderName } from "./names";
 import { alertStaff } from "./escalate";
 import type { DraftedReply } from "./replyEngine";
 import type { ParsedInboundLead } from "@/types/bdc";
@@ -18,6 +19,13 @@ export async function applyDraftTags(
   lead: Pick<ParsedInboundLead, "first_name" | "last_name" | "phone" | "email">,
   lastCustomerMessage: string | null
 ): Promise<void> {
+  if (draft.customer_name && isPlaceholderName(lead.first_name)) {
+    const name = cleanPersonName(draft.customer_name);
+    if (name && (await setLeadNameIfUnknown(leadId, name.first, name.last))) {
+      await addEvent(leadId, "name_captured", [name.first, name.last].filter(Boolean).join(" "));
+    }
+  }
+
   if (draft.appointment) {
     const ok = await createAppointmentRequest({
       lead_id: leadId,

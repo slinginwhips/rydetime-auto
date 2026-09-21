@@ -11,7 +11,9 @@ export const DEALERSHIP = {
   },
   phone: "(757) 937-8664",
   phoneHref: "tel:+17579378664",
-  smsHref: "sms:+17579378664",
+  // The office line can't receive texts; the BDC's Twilio number can, and it
+  // answers and alerts the team.
+  smsHref: "sms:+17579377977",
   email: "dawn@rydetimeauto.com",
   hours: [
     { days: "Monday – Friday", hours: "10AM – 6PM" },
