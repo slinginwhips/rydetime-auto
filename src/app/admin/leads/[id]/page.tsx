@@ -230,7 +230,7 @@ export default async function AdminLeadDetailPage({
                 {lead.chat_summary && (
                   <div className="mt-4">
                     <p className="text-xs font-semibold uppercase tracking-widest text-text-muted">
-                      Chat Summary
+                      Website chat transcript
                     </p>
                     <p className="mt-1 whitespace-pre-wrap rounded-md bg-surface p-3 text-sm text-text-primary">
                       {lead.chat_summary}

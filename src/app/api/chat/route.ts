@@ -182,10 +182,15 @@ function captureChatLead(
       const lastUser = [...messages].reverse().find((m) => m.role === "user");
       if (!lastUser) return;
       const { phone, email, firstName, lastName } = extractContact(messages);
-      const recent = messages
-        .slice(-6)
+      // The WHOLE conversation, not just the tail — Ryan reads this before he
+      // calls, and what the AI already told them matters as much as what they
+      // asked. If it runs long we keep the most recent part, which is the end
+      // that actually matters.
+      const full = messages
         .map((m) => `${m.role === "user" ? "Customer" : "AI"}: ${m.content}`)
-        .join("\n");
+        .join("\n\n");
+      const recent =
+        full.length > 9000 ? `…earlier messages trimmed…\n\n${full.slice(-9000)}` : full;
 
       let leadId: string | null = null;
       // Only worth a notification once somebody can actually be called back.
