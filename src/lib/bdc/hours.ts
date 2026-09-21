@@ -81,6 +81,13 @@ export function nextOpenDescription(now: Date = new Date()): string {
   return "when we reopen";
 }
 
+/** "5:37pm" (or "5pm" on the hour). */
+function formatClock(hour24: number, minute: number): string {
+  const suffix = hour24 >= 12 ? "pm" : "am";
+  const h = hour24 % 12 === 0 ? 12 : hour24 % 12;
+  return minute ? `${h}:${String(minute).padStart(2, "0")}${suffix}` : `${h}${suffix}`;
+}
+
 function formatHour(hour24: number): string {
   const suffix = hour24 >= 12 ? "pm" : "am";
   const h = hour24 % 12 === 0 ? 12 : hour24 % 12;
@@ -107,7 +114,7 @@ export function isWithinHours(date: string, time: string): boolean {
 /** The open/closed block handed to the model with every draft. */
 export function hoursContext(now: Date = new Date()): string {
   const { weekday, hour, minute, date } = localParts(now);
-  const clock = `${DAY_NAMES[weekday]} ${date} at ${formatHour(hour)}${minute ? `:${String(minute).padStart(2, "0")}` : ""}`;
+  const clock = `${DAY_NAMES[weekday]} ${date} at ${formatClock(hour, minute)}`;
   return isOpenAt(now)
     ? `RIGHT NOW: ${clock} (dealership local time). We are OPEN — someone is here today until ${formatHour(OPEN_HOURS[weekday]!.close)}.`
     : `RIGHT NOW: ${clock} (dealership local time). We are CLOSED. Next open: ${nextOpenDescription(now)}.`;

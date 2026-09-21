@@ -150,12 +150,21 @@ function channelGuidance(channel: ReplyChannel): string {
   }
 }
 
+/** Full lot as one-liners in the prompt, capped so it stays small. */
+const INVENTORY_LINE_CAP = 75;
+
 function customerLabel(lead: ParsedInboundLead): string {
   return [lead.first_name, lead.last_name].filter(Boolean).join(" ") || "there";
 }
 
 /** Build the lead + inventory context block for the model. */
-function buildLeadContext(lead: ParsedInboundLead, vehicle: Vehicle | null, link: string | null): string {
+function buildLeadContext(
+  lead: ParsedInboundLead,
+  vehicle: Vehicle | null,
+  link: string | null,
+  inventory: Vehicle[] = [],
+  customerText = ""
+): string {
   const hours = DEALERSHIP.hours.map((h) => `${h.days}: ${h.hours}`).join(" | ");
   const parts: string[] = [
     hoursContext(),
@@ -173,6 +182,25 @@ function buildLeadContext(lead: ParsedInboundLead, vehicle: Vehicle | null, link
       `NO SPECIFIC VEHICLE is attached to this lead. Ask which car they were looking at (or what they want), and invite them to browse our inventory.`
     );
     if (link) parts.push(`INVENTORY LINK: ${link}`);
+  }
+
+  // The whole lot, so "do you have a Highlander?" gets a real answer instead of
+  // "I can't check from here", plus full detail for any other car the customer
+  // has mentioned (beyond the one already matched above).
+  if (inventory.length > 0) {
+    const lines = inventory.slice(0, INVENTORY_LINE_CAP).map(
+      (v) =>
+        `- ${v.year} ${v.make} ${v.model}${v.trim ? ` ${v.trim}` : ""} — $${Number(v.price).toLocaleString()}, ${Number(v.mileage).toLocaleString()} mi, ${DEALERSHIP.siteUrl}/inventory/${v.slug}`
+    );
+    parts.push(
+      `CURRENT INVENTORY (${lines.length} vehicles on our lot right now — you CAN see this list, so answer availability questions from it. If they ask about a car that is not on it, say we don't have one listed right now and offer the closest match or to keep an eye out; never say you can't check inventory):\n${lines.join("\n")}`
+    );
+    const others = matchVehiclesToQuery(customerText, inventory, 3).filter((m) => m.id !== vehicle?.id);
+    if (others.length > 0) {
+      parts.push(
+        `OTHER VEHICLES THE CUSTOMER MENTIONED (full confirmed detail):\n\n${others.map(formatVehicleKnowledge).join("\n\n")}`
+      );
+    }
   }
 
   // Pull in relevant dealership knowledge (financing, etc.) for grounding.
@@ -221,7 +249,7 @@ export function planReply(lead: ParsedInboundLead, inventory: Vehicle[]): ReplyP
   const link = vehicle
     ? `${DEALERSHIP.siteUrl}/inventory/${vehicle.slug}`
     : `${DEALERSHIP.siteUrl}/inventory`;
-  const context = buildLeadContext(lead, vehicle, link);
+  const context = buildLeadContext(lead, vehicle, link, inventory, lead.message ?? "");
   const guidance = channelGuidance(lead.reply_channel);
 
   return {
@@ -342,12 +370,20 @@ export async function draftFollowUp(
   }
 
   const inventory = await getAllActiveVehicles();
-  const vehicle = resolveVehicle(lead, inventory);
+  // The lead may have arrived with no car at all ("Which vehicle caught your
+  // eye?"), so the car is often named in the customer's own replies. Read those.
+  const recentCustomerText = history
+    .filter((t) => t.direction === "inbound" && t.body)
+    .slice(-3)
+    .map((t) => t.body)
+    .join("\n");
+  const vehicle =
+    resolveVehicle(lead, inventory) ?? matchVehiclesToQuery(recentCustomerText, inventory, 1)[0] ?? null;
   const link = vehicle
     ? `${DEALERSHIP.siteUrl}/inventory/${vehicle.slug}`
     : `${DEALERSHIP.siteUrl}/inventory`;
 
-  const context = buildLeadContext(lead, vehicle, link);
+  const context = buildLeadContext(lead, vehicle, link, inventory, recentCustomerText);
   const transcript = history
     .filter((t) => t.body && t.body.trim())
     .map((t) => `${t.direction === "inbound" ? "Customer" : "You (RydeTime)"}: ${t.body}`)
