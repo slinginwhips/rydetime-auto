@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
 import type { CreditApplicationSubmission } from "@/types/lead";
@@ -73,6 +73,13 @@ export default function CreditApplicationForm({
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [dcPushed, setDcPushed] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const successRef = useRef<HTMLDivElement>(null);
+  // The submit button is at the bottom of a long form, so the confirmation used
+  // to render with the customer still scrolled down there and the "received"
+  // message off-screen above them.
+  useEffect(() => {
+    if (status === "success") successRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [status]);
   const [pickedVehicleId, setPickedVehicleId] = useState<string | undefined>(undefined);
   const [showOtherVin, setShowOtherVin] = useState(false);
   const {
@@ -137,7 +144,7 @@ export default function CreditApplicationForm({
 
   if (status === "success") {
     return (
-      <div className="rounded-lg border border-border-subtle bg-background-card p-8 text-center">
+      <div ref={successRef} className="scroll-mt-28 rounded-lg border border-border-subtle bg-background-card p-8 text-center">
         <svg
           className="mx-auto text-accent"
           width="48"
@@ -316,19 +323,19 @@ export default function CreditApplicationForm({
               {...register("monthly_housing_payment")} />
           </div>
           <div className="sm:col-span-2">
-            <span className={labelClass}>Time at this address *</span>
+            <span className={labelClass}>How long you've lived here *</span>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <input id="ca-yrs-addr" inputMode="numeric" maxLength={2} autoComplete="off"
-                  placeholder="Years" aria-label="Years at this address" className={inputClass}
+                <input id="ca-yrs-home" inputMode="numeric" maxLength={2} autoComplete="nope"
+                  placeholder="Years" aria-label="Years living here" className={inputClass}
                   {...register("years_at_address", {
                     required: "How long you've lived here is required",
                     ...digitRule("Years must be a number"),
                   })} />
               </div>
               <div>
-                <input id="ca-mos-addr" inputMode="numeric" maxLength={2} autoComplete="off"
-                  placeholder="Months" aria-label="Additional months at this address" className={inputClass}
+                <input id="ca-mos-home" inputMode="numeric" maxLength={2} autoComplete="nope"
+                  placeholder="Months" aria-label="Additional months living here" className={inputClass}
                   {...register("months_at_address", digitRule("Months must be a number"))} />
               </div>
             </div>
