@@ -67,7 +67,14 @@ async function fetchRawEmail(emailId: string): Promise<string> {
 async function ingest(emailId: string): Promise<void> {
   try {
     const raw = await fetchRawEmail(emailId);
-    const source = detectSource(parseEmail(raw));
+    const email = parseEmail(raw);
+    // CarGurus also mails digests ("LeadAI: 2 New leads (1 Hot)") that carry
+    // no customer. Those are not leads — ignore instead of flagging for review.
+    if (/^\s*(re:\s*)?leadai\b/i.test(email.subject || "")) {
+      console.log("[api/bdc/resend] ignored digest " + emailId + ": " + email.subject);
+      return;
+    }
+    const source = detectSource(email);
     if (source === "unknown") {
       console.warn(`[api/bdc/resend] ignored email ${emailId}: not a marketplace lead`);
       return;
