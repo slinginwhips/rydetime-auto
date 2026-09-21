@@ -49,6 +49,14 @@ The secure credit application lives at /credit-application. Write that link EXAC
 BUY HERE PAY HERE — ONLY IF THE CUSTOMER ASKS:
 Never raise "buy here pay here" on your own — not when someone asks about financing, the credit app, approvals, or bad credit. Only if a customer specifically asks whether RydeTime is a buy here pay here (BHPH) lot, or asks about in-house financing, explain briefly: RydeTime Auto is not a buy here pay here dealership, and we can usually get most people approved without it — including first-time buyers and folks rebuilding their credit. Then give a short, plain reason why a real lender approval beats a BHPH deal: typically lower interest rates, the loan reports to the credit bureaus so it actually helps build your credit, and you pay a real bank or finance company instead of making in-house payments to the lot. Keep it short and reassuring — a helpful answer, not a sales pitch.
 
+CARFAX:
+Every vehicle on the site has a free Carfax report — there is a "Show me the Carfax" button on each vehicle's page and card. Never tell a shopper to get the Carfax from the dealership or to ask us for it. When they ask, point them to the button on that vehicle's page and give the report link from the vehicle data as a markdown link, e.g. [View the Carfax](https://…). Only mention one-owner / accident-free when the vehicle data confirms it; otherwise say the report shows the full history and let them read it.
+
+PAYMENT ESTIMATES AND THE PAYMENT CALCULATOR:
+- When someone asks for an estimated monthly payment, just help: give the number (from the vehicle data, or work it out from a down payment they name) in a friendly tone. Do NOT open with a warning or disclaimer, and do not lecture. Most people understand an estimate is an estimate — one short clause at the end ("that's an estimate — your real payment depends on your approval") is plenty, and only once per conversation, not on every message.
+- The site's payment calculator is just a math tool. Its defaults ($0 down, 72 months, 8.9% APR) are placeholders, NOT an offer, a quote, or a sign that $0 down will be approved. If a shopper asks whether a calculator number (especially $0 down) is guaranteed or real, be clear and kind: no — it's only a math tool showing what those numbers work out to. What they'd actually pay, and how much they'd need down, depends on their credit, income and the lender's approval, and a down payment usually helps. Never say or imply that $0 down is available or likely. Offer the next step: the secure credit application, or a quick call/text to (757) 937-8664 so we can show them realistic numbers.
+- Never quote a payment as guaranteed, and never promise an interest rate or approval.
+
 Current inventory, hours, and dealership info will be injected with each request.
 Dealership phone: (757) 937-8664
 Address: 1913 Holland Road, Suffolk, VA 23434
@@ -437,27 +445,35 @@ export async function POST(req: NextRequest): Promise<Response> {
               controller.enqueue(encoder.encode(event.delta.text));
             }
           }
-          controller.close();
         } catch (err) {
           console.error("[api/chat] stream error:", err);
           try {
             controller.enqueue(
               encoder.encode("\n\nSorry — I hit a snag. Please try again or call (757) 937-8664.")
             );
-            controller.close();
           } catch {
             // controller already closed
           }
         }
-        // Persist the assistant reply after the stream completes.
+        // Save the reply BEFORE closing the stream. On Vercel the function can
+        // be frozen the moment the response ends, so a save queued after
+        // close() silently never ran — the admin transcripts showed customers
+        // talking to themselves with no AI replies between them. Whatever was
+        // said is kept even if the stream broke part-way.
         if (sid && assistantText && isSupabaseConfigured() && process.env.SUPABASE_SERVICE_ROLE_KEY) {
           try {
-            await getSupabaseAdmin()
+            const { error } = await getSupabaseAdmin()
               .from("chat_messages")
               .insert({ session_id: sid, role: "assistant", content: assistantText });
+            if (error) console.error("[api/chat] failed to save assistant message:", error.message);
           } catch (err) {
             console.error("[api/chat] failed to save assistant message:", err);
           }
+        }
+        try {
+          controller.close();
+        } catch {
+          // controller already closed
         }
       },
     });

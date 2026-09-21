@@ -33,7 +33,7 @@ export const FAQS: FaqEntry[] = [
   {
     question: "Can I get a Carfax report?",
     answer:
-      "Yes — Carfax reports are available on many of our vehicles, and where available there's a Carfax link right on the vehicle's page. If you don't see one, ask us and we'll get you the history information we have. We only display badges like one-owner or accident-free when the Carfax or DealerCenter data actually confirms it.",
+      "Yes — every vehicle we list has a free Carfax report, linked right on the vehicle's page and inventory card (look for the \"Show me the Carfax\" button). We only display badges like one-owner or accident-free when the Carfax or DealerCenter data actually confirms it.",
   },
   {
     question: "Do you take cash?",
