@@ -16,7 +16,9 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
       <dt className="text-xs font-semibold uppercase tracking-widest text-text-muted">
         {label}
       </dt>
-      <dd className="mt-0.5 text-sm text-text-primary">{value}</dd>
+      {/* Marketplace source URLs are one long unbroken token — wrap mid-word
+          so they stay inside the card instead of spilling over it. */}
+      <dd className="mt-0.5 break-all text-sm text-text-primary">{value}</dd>
     </div>
   );
 }
