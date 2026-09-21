@@ -179,32 +179,60 @@ function fromCarGurus(email: ParsedEmail): ParsedInboundLead {
   );
 }
 
+/**
+ * CARFAX sends two different lead emails:
+ *  - a phone lead ("customer called about a CARFAX listing"): name + phone +
+ *    recording link, and no car;
+ *  - a web lead from "Check Availability" on a listing: the car
+ *    (Year/Make/Model, VIN, Stock, Price), separate First/Last Name, email,
+ *    phone and the customer's own comments.
+ * Read whichever fields are present so neither loses the car or the contact.
+ */
 function fromCarfax(email: ParsedEmail): ParsedInboundLead {
   const t = email.text;
-  const { first, last } = splitName(grab(t, /Name:\s*(.+)/i));
+  const firstLabel = grab(t, /^First Name:\s*(.+)/im);
+  const lastLabel = grab(t, /^Last Name:\s*(.+)/im);
+  const { first, last } =
+    firstLabel || lastLabel
+      ? { first: firstLabel, last: lastLabel }
+      : splitName(grab(t, /^Name:\s*(.+)/im));
+
+  const phone = grab(t, /^Phone:\s*([\d\-().+ ]+)/im);
+  const leadEmail = grab(t, /^Email:\s*(\S+@\S+)/im)?.toLowerCase() ?? null;
+  const vehicleTitle = grab(t, /^Year\/Make\/Model:\s*(.+)/im);
+  const vin = grab(t, /^VIN:\s*([A-HJ-NPR-Z0-9]{17})\b/im)?.toUpperCase() ?? null;
+  const stock = grab(t, /^Stock:\s*(\S+)/im);
+  const price = grab(t, /^Price:\s*(\$[\d,]+)/im);
+  const condition = grab(t, /^Condition:\s*(.+)/im);
   const recording = grab(t, /Recording Link:\s*(\S+)/i);
-  const condition = grab(t, /Condition:\s*(.+)/i);
+  const comments = between(t, "Additional comments:", ["Lead provided by"]);
+  const listing = grab(t, /^Listing:\s*(\S+)/im);
+
+  const isPhoneLead = Boolean(recording) || !comments;
   const messageBits = [
-    "Phone lead — customer called about a CARFAX listing.",
-    condition ? `Condition: ${condition}` : null,
+    isPhoneLead && !vehicleTitle ? "Phone lead — customer called about a CARFAX listing." : null,
+    comments ? comments.replace(/\s+/g, " ").trim() : null,
+    !comments && condition ? `Condition: ${condition}` : null,
     recording ? `Call recording: ${recording}` : null,
   ].filter(Boolean);
+
   return finalize(
     "carfax",
     receivedAtIso(email),
     {
       first_name: first,
       last_name: last,
-      email: null, // Carfax phone leads carry no email
-      phone: grab(t, /Phone:\s*([\d\-().+ ]+)/i),
-      vin: null,
-      stock_number: null,
-      vehicle_title: null, // Carfax doesn't say which car
-      listed_price: null,
-      message: messageBits.join(" "),
+      email: leadEmail,
+      phone,
+      vin,
+      stock_number: stock,
+      vehicle_title: vehicleTitle,
+      listed_price: price,
+      message: messageBits.join(" ") || null,
       external_id: grab(t, /Lead ID:\s*(\S+)/i),
-      external_url: recording,
-      reply_channel: "sms",
+      external_url: recording ?? listing,
+      // Phone first; email only when there is no number.
+      reply_channel: phone ? "sms" : leadEmail ? "email" : "sms",
       reply_target: null,
       suggested_lead_type: "carfax",
     }
