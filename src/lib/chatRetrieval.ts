@@ -45,7 +45,7 @@ const EXTRA_KNOWLEDGE: KnowledgeEntry[] = [
     topic: "Payment estimates",
     keywords: ["payment", "monthly", "month", "estimate", "apr", "term", "interest", "rate", "calculator"],
     text:
-      `Site payment estimates use ${PAYMENT_DEFAULTS.termMonths} months at ${PAYMENT_DEFAULTS.apr}% APR with $${PAYMENT_DEFAULTS.downPayment} down unless the shopper changes them — those are placeholders in a math tool, not an offer and not a promise that $0 down is available. Fine print for reference only (do not recite it unprompted): ${PAYMENT_DISCLAIMER}`,
+      `Site payment estimates use ${PAYMENT_DEFAULTS.termMonths} months at ${PAYMENT_DEFAULTS.apr}% APR with ${PAYMENT_DEFAULTS.downPaymentPercent}% down unless the shopper changes them. Those are placeholders in a math tool, not an offer, not an approval, and not a promise of any down payment, APR, or payment. Fine print for reference only (do not recite it unprompted): ${PAYMENT_DISCLAIMER}`,
   },
   {
     id: "how-we-prepare",
@@ -227,7 +227,7 @@ export function formatVehicleKnowledge(v: Vehicle): string {
     // Every vehicle page carries a Carfax button built from the VIN, so there
     // is ALWAYS a report link — never tell a shopper to ask the dealership for it.
     `Carfax report link (free, on this vehicle's page too): ${getCarfaxProvider().getReportUrl(v.vin, v.carfax_url)}`,
-    `Estimated payment (${PAYMENT_DEFAULTS.termMonths} mo @ ${PAYMENT_DEFAULTS.apr}% APR, $0 down): ~$${estimate}/mo — estimate only, never a quote or offer.`,
+    `Estimated payment (${PAYMENT_DEFAULTS.termMonths} mo @ ${PAYMENT_DEFAULTS.apr}% APR, ${PAYMENT_DEFAULTS.downPaymentPercent}% down): ~$${estimate}/mo — estimate only, never a quote or offer.`,
     `Page: /inventory/${v.slug}`,
   ];
   if (prep.length > 0) lines.push(`Prep completed: ${prep.join(", ")}`);

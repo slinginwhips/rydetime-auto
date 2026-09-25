@@ -126,12 +126,19 @@ export const VEHICLE_CARD_COLUMNS =
 export const PAYMENT_DEFAULTS = {
   termMonths: 72,
   apr: 8.9,
-  downPayment: 0,
+  /** Default down payment as a share of price. Was $0, which shoppers read as
+   *  a promise that $0 down was available. */
+  downPaymentPercent: 10,
 } as const;
+
+/** 10% of price, rounded to the calculator's $250 slider step. */
+export function defaultDownPayment(price: number): number {
+  return Math.round((price * PAYMENT_DEFAULTS.downPaymentPercent) / 100 / 250) * 250;
+}
 
 export function estimateMonthlyPayment(
   price: number,
-  downPayment: number = PAYMENT_DEFAULTS.downPayment,
+  downPayment: number = defaultDownPayment(price),
   termMonths: number = PAYMENT_DEFAULTS.termMonths,
   apr: number = PAYMENT_DEFAULTS.apr
 ): number {

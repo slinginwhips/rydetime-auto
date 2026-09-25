@@ -133,7 +133,9 @@ export default function InventoryClient({
     // Invert the amortization formula for principal
     const r = 8.9 / 100 / 12;
     const n = 72;
-    return Math.round((monthly * (Math.pow(1 + r, n) - 1)) / (r * Math.pow(1 + r, n)));
+    const principal = (monthly * (Math.pow(1 + r, n) - 1)) / (r * Math.pow(1 + r, n));
+    // Estimates assume 10% down, so the financed amount is 90% of the price.
+    return Math.round(principal / 0.9);
   };
 
   const hasFilters = ["priceMin", "priceMax", "monthlyMax", "yearMin", "yearMax", "make", "model", "mileageMax", "body", "fuel", "trans", "drive", "fresh", "reduced"].some((k) => get(k));
@@ -187,7 +189,7 @@ export default function InventoryClient({
           }}
           className="mt-3 w-full"
         />
-        <p className="mt-1 text-[11px] text-text-muted">Assumes 72 mo / 8.9% APR / $0 down.</p>
+        <p className="mt-1 text-[11px] text-text-muted">Estimate only: assumes 72 mo, 8.9% APR, 10% down.</p>
       </div>
 
       {/* Year */}

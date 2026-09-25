@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { estimateMonthlyPayment, PAYMENT_DEFAULTS } from "@/types/vehicle";
+import { defaultDownPayment, estimateMonthlyPayment, PAYMENT_DEFAULTS } from "@/types/vehicle";
 import { PAYMENT_DISCLAIMER } from "@/lib/dealership";
 
 interface PaymentEstimatorProps {
@@ -12,7 +12,7 @@ interface PaymentEstimatorProps {
 const TERMS = [36, 48, 60, 72, 84] as const;
 
 export default function PaymentEstimator({ price, compact = false }: PaymentEstimatorProps) {
-  const [downPayment, setDownPayment] = useState(0);
+  const [downPayment, setDownPayment] = useState(() => defaultDownPayment(price));
   const [term, setTerm] = useState<number>(PAYMENT_DEFAULTS.termMonths);
   const [apr, setApr] = useState<number>(PAYMENT_DEFAULTS.apr);
 
@@ -32,6 +32,11 @@ export default function PaymentEstimator({ price, compact = false }: PaymentEsti
         </span>
         <span className="text-sm text-text-secondary">/mo est.</span>
       </div>
+      <p className="mt-2 rounded-md border border-border-subtle bg-surface px-3 py-2 text-xs leading-relaxed text-text-secondary">
+        <span className="font-semibold text-text-primary">Estimate only.</span> Not a financing approval or
+        offer. Your actual down payment, APR, term, and monthly payment depend on lender approval and
+        your qualifications.
+      </p>
 
       <div className={`mt-4 space-y-4 ${compact ? "text-sm" : ""}`}>
         {/* Vehicle price (fixed) */}
