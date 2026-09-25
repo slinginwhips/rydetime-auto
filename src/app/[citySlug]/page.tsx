@@ -190,8 +190,8 @@ const LOCAL_PAGES: Record<string, LocalPageDef> = {
         body: "Three things move the needle most with subprime lenders: provable income (pay stubs or bank statements), a down payment — even $500 to $1,000 helps — and a vehicle priced sensibly for your budget. Time at your current job and a recent history of on-time payments on anything (rent, phone, utilities) help too. What we'll never ask you to do is stretch into a payment you can't sustain; a loan that fails helps no one.",
       },
       {
-        heading: "Rebuilding, Not Just Borrowing",
-        body: "Handled well, an auto loan is one of the better tools for repairing credit: it adds an installment account to your file and builds a payment history month after month. We'll be straight about the trade-offs — rates on challenged-credit loans are higher, which is exactly why we'll often point you toward a less expensive, mechanically sound vehicle now, so you can refinance or trade up after your score recovers.",
+        heading: "Honest About the Trade-Offs",
+        body: "We'll be straight about the trade-offs. Rates on challenged-credit loans are usually higher, which is exactly why we'll often point you toward a less expensive, mechanically sound vehicle with a payment that actually fits your budget, instead of stretching for more car than makes sense right now.",
       },
       {
         heading: "What We Won't Do",
@@ -485,7 +485,7 @@ export default async function LocalSEOPage({
             href="/credit-application"
             className="inline-flex items-center justify-center rounded-md border border-border-subtle bg-surface px-8 py-3 text-sm font-semibold text-text-primary transition-colors hover:border-accent hover:text-accent"
           >
-            Get Approved
+            Apply for Financing
           </Link>
         </div>
       </section>

@@ -38,6 +38,58 @@ const digitRule = (message: string) => ({
   pattern: { value: /^\d{0,2}$/, message },
 });
 
+const STEP_TITLES = ["About you", "Where you live", "Work & income", "Co-applicant", "Your deal", "Review & sign"];
+
+/** Sticky "Step 2 of 6" bar under the site header. Tracks whichever section
+ *  is in view; tapping a segment jumps to that section. */
+function ApplicationProgress() {
+  const [current, setCurrent] = useState(1);
+  useEffect(() => {
+    const sections = [...document.querySelectorAll<HTMLElement>("[data-app-step]")];
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) setCurrent(Number((e.target as HTMLElement).dataset.appStep));
+        }
+      },
+      // A section is "current" once it crosses the upper third of the screen.
+      { rootMargin: "-30% 0px -60% 0px" }
+    );
+    sections.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <nav
+      aria-label="Application progress"
+      className="sticky top-[66px] z-20 -mx-4 border-b border-border-subtle bg-background/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-md sm:border"
+    >
+      <p className="text-xs font-semibold text-text-secondary" aria-live="polite">
+        Step {current} of {STEP_TITLES.length}
+        <span className="text-text-muted"> · {STEP_TITLES[current - 1]}</span>
+      </p>
+      <ol className="mt-2 grid grid-cols-6 gap-1.5">
+        {STEP_TITLES.map((t, i) => (
+          <li key={t}>
+            <a
+              href={`#app-step-${i + 1}`}
+              aria-label={`Step ${i + 1}: ${t}`}
+              aria-current={i + 1 === current ? "step" : undefined}
+              className="block py-1.5"
+            >
+              <span
+                className={`block h-1.5 rounded-full transition-colors ${
+                  i + 1 <= current ? "bg-accent" : "bg-border-subtle"
+                }`}
+              />
+            </a>
+          </li>
+        ))}
+      </ol>
+    </nav>
+  );
+}
+
 function SectionCard({
   step,
   title,
@@ -50,7 +102,11 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-border-subtle bg-background-card p-6 sm:p-8">
+    <section
+      id={`app-step-${step}`}
+      data-app-step={step}
+      className="scroll-mt-32 rounded-lg border border-border-subtle bg-background-card p-6 sm:p-8"
+    >
       <div className="flex items-start gap-3">
         <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-bold text-white">
           {step}
@@ -210,6 +266,8 @@ export default function CreditApplicationForm({
           lending partners and is <span className="font-semibold">never stored on this website</span>.
         </p>
       </div>
+
+      <ApplicationProgress />
 
       {/* 1 — Applicant */}
       <SectionCard step={1} title="About you" subtitle="The primary applicant.">

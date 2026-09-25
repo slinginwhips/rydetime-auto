@@ -14,7 +14,7 @@ export const metadata = generatePageMetadata({
 const STEPS = [
   {
     title: "Tell us about yourself",
-    body: "A quick, secure application through DealerCenter — no obligation, no impact on how we treat you. It takes about five minutes.",
+    body: "Fill out our secure credit application right here on the site, day or night. It takes about five minutes, and applying doesn't obligate you to anything.",
   },
   {
     title: "We shop our lenders",
@@ -54,7 +54,7 @@ export default function FinancePage() {
               href="/credit-application"
               className="inline-flex items-center justify-center rounded-md bg-accent px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
             >
-              Get Approved
+              Start Your Credit Application
             </Link>
             <AskAIButton label="Ask AI About Financing" />
           </div>
@@ -110,10 +110,6 @@ export default function FinancePage() {
                 of our lenders work with that.
               </li>
               <li className="flex gap-2">
-                <span className="text-accent">›</span> We&apos;ll show you how
-                the loan builds your credit going forward.
-              </li>
-              <li className="flex gap-2">
                 <span className="text-accent">›</span> Co-signers welcome but
                 not always required.
               </li>
@@ -129,8 +125,7 @@ export default function FinancePage() {
               doesn&apos;t automatically disqualify you. Approval and terms
               depend on your full picture: income, down payment, and how recent
               the issues are. We&apos;ll be straight with you about what&apos;s
-              realistic, and a well-handled auto loan is one of the better
-              tools for rebuilding your score.
+              realistic.
             </p>
             <ul className="mt-4 space-y-2 text-sm text-text-secondary">
               <li className="flex gap-2">
@@ -140,10 +135,6 @@ export default function FinancePage() {
               <li className="flex gap-2">
                 <span className="text-accent">›</span> Honest answers — if a
                 deal doesn&apos;t make sense for you, we&apos;ll say so.
-              </li>
-              <li className="flex gap-2">
-                <span className="text-accent">›</span> On-time payments
-                reported can help your credit recover.
               </li>
             </ul>
           </div>

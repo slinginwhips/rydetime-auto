@@ -9,7 +9,7 @@ const QUICK_LINKS = [
   { href: "/under-15000", label: "Under $15,000" },
   { href: "/under-20000", label: "Under $20,000" },
   { href: "/finance", label: "Financing" },
-  { href: "/credit-application", label: "Get Approved" },
+  { href: "/credit-application", label: "Credit Application" },
   { href: "/trade-in", label: "Trade-In" },
   { href: "/sell-us-your-car", label: "Sell Us Your Car" },
   { href: "/about", label: "About" },

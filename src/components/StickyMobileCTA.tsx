@@ -37,7 +37,7 @@ export default function StickyMobileCTA({ vehicleId }: StickyMobileCTAProps) {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <polyline points="20 6 9 17 4 12" />
           </svg>
-          <span className="text-[11px] font-semibold">Get Approved</span>
+          <span className="text-[11px] font-semibold">Apply</span>
         </Link>
         <button
           type="button"

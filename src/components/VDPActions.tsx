@@ -53,7 +53,7 @@ export default function VDPActions({ vehicle }: VDPActionsProps) {
         href="/credit-application"
         className="shimmer-hover block w-full rounded-md bg-accent px-4 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
       >
-        Get Approved
+        Apply for Financing
       </Link>
       <button
         type="button"

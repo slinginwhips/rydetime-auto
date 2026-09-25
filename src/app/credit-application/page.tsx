@@ -46,7 +46,7 @@ export default async function CreditApplicationPage({
             Secure Credit Application
           </p>
           <h1 className="text-3xl font-bold tracking-tight text-text-primary md:text-4xl">
-            Get Approved — On Your Terms.
+            Apply for Financing, On Your Terms.
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-relaxed text-text-secondary">
             Fill out and sign your application right here in a few minutes — day
