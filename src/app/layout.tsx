@@ -25,7 +25,9 @@ export const metadata: Metadata = {
     siteName: DEALERSHIP.name,
     type: "website",
     locale: "en_US",
+    images: [{ url: "/logo.png" }],
   },
+  twitter: { card: "summary_large_image", images: ["/logo.png"] },
 };
 
 export default function RootLayout({

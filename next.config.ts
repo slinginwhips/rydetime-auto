@@ -9,7 +9,10 @@ const nextConfig: NextConfig = {
     formats: ["image/avif", "image/webp"],
   },
   async redirects() {
-    return [];
+    return [
+      { source: "/privacy-policy", destination: "/privacy", permanent: true },
+      { source: "/terms-of-use", destination: "/terms", permanent: true },
+    ];
   },
 };
 

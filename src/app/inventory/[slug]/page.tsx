@@ -36,7 +36,7 @@ interface VDPProps {
 export async function generateMetadata({ params }: VDPProps): Promise<Metadata> {
   const { slug } = await params;
   const vehicle = await getVehicleBySlug(slug);
-  if (!vehicle) return { title: "Vehicle Not Found" };
+  if (!vehicle) notFound();
   return generateVehicleMetadata(vehicle);
 }
 

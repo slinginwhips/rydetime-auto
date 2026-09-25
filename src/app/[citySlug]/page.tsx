@@ -346,7 +346,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { citySlug } = await params;
   const page = LOCAL_PAGES[citySlug];
-  if (!page) return {};
+  if (!page) notFound();
   return generatePageMetadata({
     title: page.metaTitle,
     description: page.metaDescription,

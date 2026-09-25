@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { DEALERSHIP } from "@/lib/dealership";
 import type { Vehicle } from "@/types/vehicle";
 
+const DEFAULT_SHARE_IMAGE = "/logo.png";
+
 interface PageMetaInput {
   title: string;
   description: string;
@@ -12,8 +14,12 @@ interface PageMetaInput {
 
 export function generatePageMetadata(input: PageMetaInput): Metadata {
   const url = `${DEALERSHIP.siteUrl}${input.path}`;
+  // Page openGraph replaces the layout's, so fall back to the logo here.
+  const image = input.image || DEFAULT_SHARE_IMAGE;
   return {
-    title: input.title,
+    // Titles that already carry the dealership name skip the layout's
+    // "| RydeTime Auto" template so it isn't printed twice.
+    title: input.title.includes(DEALERSHIP.name) ? { absolute: input.title } : input.title,
     description: input.description,
     alternates: { canonical: url },
     robots: input.noIndex ? { index: false, follow: false } : undefined,
@@ -24,13 +30,13 @@ export function generatePageMetadata(input: PageMetaInput): Metadata {
       siteName: DEALERSHIP.name,
       type: "website",
       locale: "en_US",
-      images: input.image ? [{ url: input.image }] : undefined,
+      images: [{ url: image }],
     },
     twitter: {
-      card: input.image ? "summary_large_image" : "summary",
+      card: "summary_large_image",
       title: input.title,
       description: input.description,
-      images: input.image ? [input.image] : undefined,
+      images: [image],
     },
   };
 }
