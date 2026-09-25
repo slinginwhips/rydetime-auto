@@ -1,7 +1,8 @@
+import Image from "next/image";
 import Link from "next/link";
 import VehicleCard from "@/components/VehicleCard";
 import AIMatchmaker from "@/components/AIMatchmaker";
-import ReviewsSection from "@/components/ReviewsSection";
+import ReviewsSection, { GOOGLE_RATING } from "@/components/ReviewsSection";
 import Reveal from "@/components/Reveal";
 import CountUp from "@/components/CountUp";
 import { getFeaturedVehicles } from "@/lib/vehicles";
@@ -59,6 +60,15 @@ const VALUE_PROPS = [
   },
 ];
 
+const QUICK_SHOP = [
+  { href: "/under-15000", label: "Under $15k" },
+  { href: "/under-20000", label: "Under $20k" },
+  { href: "/inventory?body=SUV", label: "SUVs" },
+  { href: "/inventory?body=Truck", label: "Trucks" },
+  { href: "/inventory?body=Sedan%2CHatchback", label: "Commuter Cars" },
+  { href: "/fresh-arrivals", label: "Fresh Arrivals" },
+];
+
 const LOCAL_LINKS = [
   { href: "/used-cars-suffolk-va", label: "Suffolk" },
   { href: "/used-cars-virginia-beach-va", label: "Virginia Beach" },
@@ -69,24 +79,35 @@ const LOCAL_LINKS = [
 
 export default async function HomePage() {
   const featured = await getFeaturedVehicles(4);
+  const spotlight = featured.find((v) => v.primary_photo_url) ?? null;
 
   return (
     <>
       {/* Hero */}
       <section className="border-b border-border-subtle bg-background">
-        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8 lg:py-32">
-          <div className="max-w-3xl">
-            <p className="hero-seq hero-seq-3 text-xs font-bold uppercase tracking-widest text-text-secondary">
-              Suffolk, VA — Independent Dealer
+        <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-[1.1fr_1fr] lg:gap-14 lg:px-8 lg:py-20">
+          <div className="min-w-0">
+            <p className="hero-seq hero-seq-1 text-xs font-bold uppercase tracking-widest text-text-secondary">
+              Suffolk, VA · Family-Owned Independent Dealer
             </p>
-            <h1 className="hero-seq hero-seq-4 mt-4 text-4xl font-extrabold tracking-tight text-text-primary sm:text-5xl lg:text-6xl">
+            <h1 className="hero-seq hero-seq-2 mt-4 text-4xl font-extrabold tracking-tight text-text-primary sm:text-5xl lg:text-6xl">
               Find Your Next Vehicle<span className="period-pulse">.</span>
             </h1>
-            <p className="hero-seq hero-seq-5 mt-5 max-w-xl text-lg leading-relaxed text-text-secondary">
-              Honest used cars, AI-powered search, no pressure. Serving Suffolk and Hampton
-              Roads.
+            <p className="hero-seq hero-seq-3 mt-5 max-w-xl text-lg leading-relaxed text-text-secondary">
+              Honest used cars, straight answers, no pressure. Serving Suffolk and all of
+              Hampton Roads.
             </p>
-            <div className="hero-seq hero-seq-6 mt-8 flex flex-wrap gap-3">
+            <Link
+              href="/reviews"
+              className="hero-seq hero-seq-3 mt-5 inline-flex items-center gap-2 text-sm text-text-secondary transition-colors hover:text-text-primary"
+            >
+              <span className="text-amber-400" aria-hidden="true">★★★★★</span>
+              <span>
+                <strong className="font-semibold text-text-primary">{GOOGLE_RATING.rating}</strong> on Google ·{" "}
+                {GOOGLE_RATING.reviewCount}+ reviews
+              </span>
+            </Link>
+            <div className="hero-seq hero-seq-4 mt-7 flex flex-wrap gap-3">
               <Link
                 href="/inventory"
                 className="btn-glow rounded-md bg-accent px-7 py-3.5 text-base font-semibold text-white transition-colors hover:bg-accent-hover"
@@ -100,7 +121,55 @@ export default async function HomePage() {
                 Find My Match
               </a>
             </div>
+            <nav aria-label="Shop by category" className="hero-seq hero-seq-5 mt-8">
+              <p className="text-xs font-semibold uppercase tracking-widest text-text-muted">Shop</p>
+              <ul className="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
+                {QUICK_SHOP.map((q) => (
+                  <li key={q.label} className="flex-shrink-0">
+                    <Link
+                      href={q.href}
+                      className="inline-flex min-h-10 items-center rounded-full border border-border-subtle px-4 text-sm font-medium text-text-secondary transition-colors hover:border-accent hover:text-text-primary"
+                    >
+                      {q.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
           </div>
+
+          {spotlight && (
+            <Link
+              href={`/inventory/${spotlight.slug}`}
+              className="hero-seq hero-seq-3 group relative hidden aspect-[4/3] overflow-hidden rounded-xl border border-border-subtle bg-background-card lg:block"
+            >
+              {spotlight.primary_photo_url && (
+                <Image
+                  src={spotlight.primary_photo_url}
+                  alt={[spotlight.year, spotlight.make, spotlight.model, spotlight.trim].filter(Boolean).join(" ")}
+                  fill
+                  priority
+                  sizes="(min-width: 1024px) 45vw, 0px"
+                  className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                  unoptimized
+                />
+              )}
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-6 pt-16">
+                <p className="text-xs font-semibold uppercase tracking-widest text-white/70">On the lot now</p>
+                <div className="mt-1 flex items-end justify-between gap-4">
+                  <p className="text-xl font-bold text-white">
+                    {[spotlight.year, spotlight.make, spotlight.model].join(" ")}
+                  </p>
+                  <p className="tabular text-2xl font-extrabold text-white">
+                    ${spotlight.price.toLocaleString()}
+                  </p>
+                </div>
+                <p className="mt-1 text-sm text-white/70">
+                  {spotlight.mileage.toLocaleString()} miles · View details →
+                </p>
+              </div>
+            </Link>
+          )}
         </div>
       </section>
 
@@ -120,10 +189,8 @@ export default async function HomePage() {
         </div>
         {featured.length > 0 ? (
           <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {featured.map((v, i) => (
-              <Reveal key={v.id} variant="up" delay={i * 100}>
-                <VehicleCard vehicle={v} />
-              </Reveal>
+            {featured.map((v) => (
+              <VehicleCard key={v.id} vehicle={v} />
             ))}
           </div>
         ) : (

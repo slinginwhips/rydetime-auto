@@ -277,10 +277,10 @@ summary {
 }
 .hero-seq-1 { animation-delay: 0.05s; }
 .hero-seq-2 { animation-delay: 0.2s; }
-.hero-seq-3 { animation-delay: 0.4s; }
-.hero-seq-4 { animation-delay: 0.6s; }
-.hero-seq-5 { animation-delay: 0.8s; }
-.hero-seq-6 { animation-delay: 1s; }
+.hero-seq-3 { animation-delay: 0.3s; }
+.hero-seq-4 { animation-delay: 0.4s; }
+.hero-seq-5 { animation-delay: 0.5s; }
+.hero-seq-6 { animation-delay: 0.6s; }
 
 /* --- Red period pulse (hero headline) --- */
 @keyframes periodPulse {
@@ -417,4 +417,15 @@ input[type="range"]::-moz-range-thumb {
   background: var(--accent-red);
   cursor: pointer;
   border: 2px solid #f5f5f5;
+}
+
+/* Horizontal chip rows: swipeable without a visible scrollbar */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Slide-in reveals start 32px off-axis; clip (not hidden) so they never
+   create sideways scroll on phones and position: sticky keeps working. */
+html,
+body {
+  overflow-x: clip;
 }

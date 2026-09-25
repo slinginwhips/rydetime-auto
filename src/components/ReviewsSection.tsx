@@ -9,7 +9,7 @@ interface ReviewsSectionProps {
  * placeholder data below can be swapped for the Google Places API later
  * without changing markup.
  */
-const GOOGLE_RATING = {
+export const GOOGLE_RATING = {
   rating: 4.9,
   reviewCount: 190,
 };
