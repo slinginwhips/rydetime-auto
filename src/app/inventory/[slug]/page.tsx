@@ -49,6 +49,15 @@ export default async function VehicleDetailPage({ params }: VDPProps) {
   const similar = await getSimilarVehicles(vehicle, 6);
   const monthly = estimateMonthlyPayment(vehicle.price);
 
+  const mpg =
+    vehicle.city_mpg && vehicle.highway_mpg ? `${vehicle.city_mpg}/${vehicle.highway_mpg} mpg` : null;
+  const keyFacts = [
+    { label: "Miles", value: vehicle.mileage.toLocaleString() },
+    { label: "Drive", value: vehicle.drivetrain },
+    { label: "Trans", value: shortTransmission(vehicle.transmission) },
+    { label: mpg ? "City/Hwy" : "Fuel", value: mpg ?? vehicle.fuel_type },
+  ].filter((f): f is { label: string; value: string } => Boolean(f.value));
+
   const specs: { label: string; value: string | null }[] = [
     { label: "Year", value: String(vehicle.year) },
     { label: "Make", value: vehicle.make },
@@ -120,9 +129,11 @@ export default async function VehicleDetailPage({ params }: VDPProps) {
         </nav>
 
         {/* Title (mobile-first, shows above gallery) */}
-        <div className="mt-4 lg:hidden">
-          <h1 className="text-2xl font-bold text-text-primary">{title}</h1>
-          <div className="mt-2 flex items-baseline gap-3">
+        {/* One h1 for every screen size: visible here on phones, screen-reader
+            only on desktop where the sticky column shows the title visually. */}
+        <div className="mt-4 lg:mt-0">
+          <h1 className="text-2xl font-bold text-text-primary lg:sr-only">{title}</h1>
+          <div className="mt-2 flex items-baseline gap-3 lg:hidden">
             <span className="tabular text-3xl font-bold text-text-primary">
               ${vehicle.price.toLocaleString()}
             </span>
@@ -135,6 +146,7 @@ export default async function VehicleDetailPage({ params }: VDPProps) {
               Est. ${monthly.toLocaleString()}/mo
             </span>
           </div>
+          <KeyFacts facts={keyFacts} className="mt-4 lg:hidden" />
         </div>
 
         <StickySentinel targetId="vdp-sticky-column" />
@@ -293,7 +305,7 @@ export default async function VehicleDetailPage({ params }: VDPProps) {
             <div id="vdp-sticky-column" className="sticky-shadow space-y-5 rounded-lg">
               {/* Title + price (desktop) */}
               <div className="hidden lg:block">
-                <h1 className="text-2xl font-bold text-text-primary">{title}</h1>
+                <p aria-hidden="true" className="text-2xl font-bold text-text-primary">{title}</p>
                 <div className="mt-3 flex items-baseline gap-3">
                   <span className="tabular text-4xl font-bold text-text-primary">
                     ${vehicle.price.toLocaleString()}
@@ -308,6 +320,7 @@ export default async function VehicleDetailPage({ params }: VDPProps) {
                   Est. ${monthly.toLocaleString()}/mo · {vehicle.mileage.toLocaleString()} miles ·
                   Stock #{vehicle.stock_number}
                 </p>
+                <KeyFacts facts={keyFacts} className="mt-4" />
               </div>
 
               <PaymentEstimator price={vehicle.price} compact />
@@ -337,4 +350,28 @@ export default async function VehicleDetailPage({ params }: VDPProps) {
       <StickyMobileCTA vehicleId={vehicle.id} />
     </>
   );
+}
+
+/** Four at-a-glance tiles beside the price, so shoppers don't have to dig
+ *  through the spec table for the numbers they compare cars on. */
+function KeyFacts({ facts, className = "" }: { facts: { label: string; value: string }[]; className?: string }) {
+  if (facts.length === 0) return null;
+  return (
+    <dl className={`grid grid-cols-4 gap-2 ${className}`}>
+      {facts.map((f) => (
+        <div key={f.label} className="rounded-md border border-border-subtle bg-background-card px-2 py-2.5 text-center">
+          <dt className="text-[11px] uppercase tracking-wide text-text-muted">{f.label}</dt>
+          <dd className="tabular mt-0.5 truncate text-sm font-semibold text-text-primary">{f.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/** "8-Speed Automatic" → "Auto" so it fits a quarter-width tile on phones. */
+function shortTransmission(t: string | null): string | null {
+  if (!t) return null;
+  if (/manual/i.test(t)) return "Manual";
+  if (/auto|cvt|dct/i.test(t)) return "Auto";
+  return t;
 }
