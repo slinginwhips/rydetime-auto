@@ -5,7 +5,7 @@ import { DEALERSHIP } from "@/lib/dealership";
 export const metadata = generatePageMetadata({
   title: "Privacy Policy | RydeTime Auto — Suffolk, VA",
   description:
-    "How RydeTime Auto collects, uses, and protects your personal information across our website, lead forms, AI chat assistant, SMS text messages, and deposit payments.",
+    "How RydeTime Auto collects, uses, and protects your information across our website, lead forms, AI chat, text messages, and deposit payments.",
   path: "/privacy",
 });
 

@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const metadata = generatePageMetadata({
   title: "Used Car Inventory in Suffolk, VA",
   description:
-    "Browse our full inventory of quality used cars, trucks, SUVs, and vans in Suffolk, VA. Filter by price, payment, make, mileage, and more. Serving all of Hampton Roads.",
+    "Browse quality used cars, trucks, SUVs, and vans in Suffolk, VA. Filter by price, payment, make, mileage, and more. Serving all of Hampton Roads.",
   path: "/inventory",
 });
 

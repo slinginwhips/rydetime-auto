@@ -7,7 +7,7 @@ import AskAIButton from "@/components/AskAIButton";
 export const metadata = generatePageMetadata({
   title: "Used Car Financing in Suffolk, VA | RydeTime Auto",
   description:
-    "Honest used car financing for all credit situations — first-time buyers, rebuilding credit, and everything in between. No pressure, no games. Serving Suffolk and Hampton Roads.",
+    "Honest used car financing for all credit situations, from first-time buyers to rebuilding credit. No pressure, no games. Serving Suffolk and Hampton Roads.",
   path: "/finance",
 });
 

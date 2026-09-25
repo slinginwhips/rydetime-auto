@@ -7,7 +7,7 @@ import ReviewsSection from "@/components/ReviewsSection";
 export const metadata = generatePageMetadata({
   title: "About RydeTime Auto | Family-Owned & Operated Used Car Dealer — Suffolk, VA",
   description:
-    "RydeTime Auto is a family-owned and operated independent used car dealership at 1913 Holland Road, Suffolk, VA. Honest cars, no-pressure process, serving Hampton Roads and northeastern North Carolina.",
+    "Family-owned independent used car dealer at 1913 Holland Road, Suffolk, VA. Honest cars, no-pressure buying, serving Hampton Roads and northeast NC.",
   path: "/about",
 });
 

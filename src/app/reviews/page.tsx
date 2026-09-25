@@ -6,7 +6,7 @@ import ReviewsSection from "@/components/ReviewsSection";
 export const metadata = generatePageMetadata({
   title: "Customer Reviews | RydeTime Auto — Suffolk, VA",
   description:
-    "See what customers say about buying a used car at RydeTime Auto in Suffolk, VA. Honest vehicles, no-pressure process, and a family-owned and operated experience.",
+    "See what customers say about buying a used car at RydeTime Auto in Suffolk, VA. Honest vehicles, no-pressure buying, family-owned and operated.",
   path: "/reviews",
 });
 

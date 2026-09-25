@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export const metadata = generatePageMetadata({
   title: "RydeTime Auto | Used Cars in Suffolk, VA — Serving Hampton Roads",
   description:
-    "Honest used cars in Suffolk, VA. AI-powered search, no-pressure process, and financing for every credit situation. Serving Virginia Beach, Chesapeake, Norfolk, Portsmouth, and all of Hampton Roads.",
+    "Honest used cars in Suffolk, VA. AI-powered search, no-pressure buying, and financing for every credit situation. Serving all of Hampton Roads.",
   path: "/",
 });
 

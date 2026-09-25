@@ -6,7 +6,7 @@ import { HOLD_POLICY_TEXT, HOLD_PERIOD_DAYS } from "@/types/lead";
 export const metadata = generatePageMetadata({
   title: "Terms & Conditions | RydeTime Auto — Suffolk, VA",
   description:
-    "Terms and conditions for the RydeTime Auto website, including vehicle listing accuracy, payment estimates, SMS text messaging terms, AI assistant terms, and hold deposit policy.",
+    "Terms for the RydeTime Auto website: vehicle listing accuracy, payment estimates, SMS text messaging, AI assistant use, and our hold deposit policy.",
   path: "/terms",
 });
 

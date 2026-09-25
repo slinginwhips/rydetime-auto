@@ -5,7 +5,7 @@ import TradeInForm from "@/components/TradeInForm";
 export const metadata = generatePageMetadata({
   title: "Sell Us Your Car — No Purchase Necessary | RydeTime Auto",
   description:
-    "Sell your car to RydeTime Auto in Suffolk, VA — no purchase necessary. Quick form, estimated offer, honest in-person appraisal. We buy cars across Hampton Roads.",
+    "Sell your car to RydeTime Auto in Suffolk, VA, no purchase necessary. Quick form, estimated offer, honest in-person appraisal. We buy across Hampton Roads.",
   path: "/sell-us-your-car",
 });
 

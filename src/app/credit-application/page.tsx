@@ -6,7 +6,7 @@ import CreditApplicationForm from "@/components/CreditApplicationForm";
 export const metadata = generatePageMetadata({
   title: "Secure Credit Application | RydeTime Auto — Suffolk, VA",
   description:
-    "Apply for used car financing at RydeTime Auto. Fill out and sign your secure credit application online in minutes. First-time buyers and rebuilding credit welcome.",
+    "Apply for financing at RydeTime Auto. Fill out and sign your secure credit application online in minutes. First-time buyers and rebuilding credit welcome.",
   path: "/credit-application",
 });
 

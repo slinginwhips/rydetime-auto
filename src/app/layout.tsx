@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     template: "%s | RydeTime Auto",
   },
   description:
-    "Honest used cars in Suffolk, VA. AI-powered search, no-pressure process, and financing for every credit situation. Serving Virginia Beach, Chesapeake, Norfolk, Portsmouth, and all of Hampton Roads.",
+    "Honest used cars in Suffolk, VA. AI-powered search, no-pressure buying, and financing for every credit situation. Serving all of Hampton Roads.",
   openGraph: {
     siteName: DEALERSHIP.name,
     type: "website",
