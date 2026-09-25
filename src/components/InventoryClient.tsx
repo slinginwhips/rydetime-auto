@@ -364,13 +364,13 @@ export default function InventoryClient({
       <div ref={topRef} className="scroll-mt-24" />
 
       {/* Quick filter chips */}
-      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
+      <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
         {QUICK_FILTERS.map((qf) => (
           <button
             key={qf.label}
             type="button"
             onClick={() => toggleQuickFilter(qf.params)}
-            className={`flex-shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
+            className={`flex-shrink-0 min-h-10 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
               activeQuickFilter(qf.params)
                 ? "border-accent bg-accent text-white"
                 : "border-border-subtle text-text-secondary hover:border-accent hover:text-text-primary"
@@ -395,13 +395,13 @@ export default function InventoryClient({
           </svg>
           Filters
         </button>
-        <p className="hidden text-sm text-text-secondary lg:block" aria-live="polite">
+        <p className="mr-auto whitespace-nowrap text-sm text-text-secondary lg:mr-0" aria-live="polite">
           {total} vehicle{total === 1 ? "" : "s"}
           {isPending && " · updating…"}
         </p>
         <select
           aria-label="Sort vehicles"
-          className="rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary transition-colors duration-200 focus:border-accent focus:outline-none"
+          className="w-40 min-w-0 rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-text-primary transition-colors duration-200 focus:border-accent focus:outline-none sm:w-auto"
           value={get("sort") || "price_desc"}
           onChange={(e) => setParams({ sort: e.target.value === "price_desc" ? null : e.target.value })}
         >
@@ -423,11 +423,17 @@ export default function InventoryClient({
             <>
               {pagination("top")}
               <div className={`grid grid-cols-1 gap-5 transition-opacity duration-300 sm:grid-cols-2 xl:grid-cols-3 ${isPending ? "opacity-60" : "opacity-100"}`}>
-                {vehicles.map((v, i) => (
-                  <Reveal key={`${filterEpoch}-${v.id}`} variant="up" delay={(i % 12) * 60}>
-                    <VehicleCard vehicle={v} />
-                  </Reveal>
-                ))}
+                {vehicles.map((v, i) =>
+                  // First row paints with the HTML, not after hydration: it's
+                  // the page's main content and shouldn't wait on JS to appear.
+                  i < 3 ? (
+                    <VehicleCard key={`${filterEpoch}-${v.id}`} vehicle={v} />
+                  ) : (
+                    <Reveal key={`${filterEpoch}-${v.id}`} variant="up" delay={(i % 12) * 60}>
+                      <VehicleCard vehicle={v} />
+                    </Reveal>
+                  )
+                )}
               </div>
               {pagination("bottom")}
             </>
@@ -491,13 +497,15 @@ export default function InventoryClient({
               </button>
             </div>
             {filters}
-            <button
-              type="button"
-              onClick={() => setDrawerOpen(false)}
-              className="mt-6 w-full rounded-md bg-accent px-5 py-3 text-sm font-semibold text-white"
-            >
-              Show Results
-            </button>
+            <div className="sticky bottom-0 -mx-5 mt-6 border-t border-border-subtle bg-background-secondary px-5 pb-1 pt-4">
+              <button
+                type="button"
+                onClick={() => setDrawerOpen(false)}
+                className="w-full rounded-md bg-accent px-5 py-3.5 text-sm font-semibold text-white"
+              >
+                {isPending ? "Updating…" : `Show ${total} vehicle${total === 1 ? "" : "s"}`}
+              </button>
+            </div>
         </div>
       </div>
     </div>
