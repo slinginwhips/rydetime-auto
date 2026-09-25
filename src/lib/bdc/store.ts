@@ -298,6 +298,9 @@ export async function saveAttachmentFromUrl(args: {
   url: string;
   contentType?: string;
   authHeader?: string;
+  /** Position within a single multi-media text, so 3 paystub photos in one
+   *  message get 3 distinct paths instead of overwriting each other. */
+  index?: number;
 }): Promise<string | null> {
   if (!hasDb()) return null;
   try {
@@ -309,10 +312,10 @@ export async function saveAttachmentFromUrl(args: {
     const contentType = args.contentType || res.headers.get("content-type") || "application/octet-stream";
     const buf = Buffer.from(await res.arrayBuffer());
     const ext = contentType.split("/")[1]?.split(";")[0]?.replace(/[^a-z0-9]/gi, "") || "bin";
-    // Timestamp is provided by the DB elsewhere; here we build a unique-ish name
-    // from the message id (or a random-free counter is unnecessary — the storage
-    // path only needs to be unique per lead, and message_id already is).
-    const filename = `${args.message_id ?? "media"}.${ext}`;
+    // The path only needs to be unique per lead: message_id is, and the index
+    // separates several files sent in the same text.
+    const suffix = args.index && args.index > 0 ? `-${args.index + 1}` : "";
+    const filename = `${args.message_id ?? "media"}${suffix}.${ext}`;
     const storage_path = `${args.lead_id}/${filename}`;
 
     const supabase = getSupabaseAdmin();

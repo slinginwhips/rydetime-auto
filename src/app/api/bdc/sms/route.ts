@@ -126,6 +126,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           url,
           contentType: params[`MediaContentType${i}`],
           authHeader,
+          index: i,
         });
       }
       await addEvent(lead.id, "attachment_saved", `${numMedia} file(s) from customer text`);
