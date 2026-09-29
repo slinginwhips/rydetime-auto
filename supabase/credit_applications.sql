@@ -118,7 +118,7 @@ alter table credit_applications
   add column if not exists co_other_income text,
   add column if not exists co_other_income_source text;
 
-create index if not exists idx_credit_apps_leadon credit_applications (lead_id);
+create index if not exists idx_credit_apps_lead on credit_applications (lead_id);
 create index if not exists idx_credit_apps_created on credit_applications (created_at desc);
 
 -- 3) Lock it down: RLS ON, NO public policies. This denies the public/anon key
