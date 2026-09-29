@@ -258,6 +258,8 @@ export interface CreditApplicationSubmission {
   months_at_address?: string;
   monthly_housing_payment?: string;
   prev_address?: string;
+  prev_years_at_address?: string;
+  prev_months_at_address?: string;
 
   // employment & income
   employment_status?: EmploymentStatus;
@@ -266,11 +268,17 @@ export interface CreditApplicationSubmission {
   work_phone?: string;
   years_employed?: string;
   months_employed?: string;
+  // Previous employer — required when under 2 years on the current job, unless
+  // the applicant checks "no previous employer".
+  prev_employer_name?: string;
+  prev_years_employed?: string;
+  prev_months_employed?: string;
+  no_prev_employer?: boolean;
   gross_monthly_income?: string;
   other_income?: string;
   other_income_source?: string;
 
-  // co-applicant (optional)
+  // co-applicant (optional) — asked everything the applicant is.
   has_co_applicant?: boolean;
   co_first_name?: string;
   co_last_name?: string;
@@ -278,9 +286,35 @@ export interface CreditApplicationSubmission {
   co_ssn?: string; // FULL — pass-through only, never stored
   co_email?: string;
   co_phone?: string;
-  co_employer_name?: string;
-  co_gross_monthly_income?: string;
   co_relationship?: string;
+  co_drivers_license?: string;
+  co_other_income?: string;
+  co_other_income_source?: string;
+  // Form-only convenience: the client copies the applicant's address into the
+  // co_* address fields, so the API always receives a full address.
+  co_same_address?: boolean;
+  co_address?: string;
+  co_city?: string;
+  co_state?: string;
+  co_zip?: string;
+  co_housing_status?: HousingStatus;
+  co_monthly_housing_payment?: string;
+  co_years_at_address?: string;
+  co_months_at_address?: string;
+  co_prev_address?: string;
+  co_prev_years_at_address?: string;
+  co_prev_months_at_address?: string;
+  co_employment_status?: EmploymentStatus;
+  co_employer_name?: string;
+  co_job_title?: string;
+  co_work_phone?: string;
+  co_years_employed?: string;
+  co_months_employed?: string;
+  co_prev_employer_name?: string;
+  co_prev_years_employed?: string;
+  co_prev_months_employed?: string;
+  co_no_prev_employer?: boolean;
+  co_gross_monthly_income?: string;
 
   // deal
   vehicle_id?: string;
@@ -321,12 +355,18 @@ export interface CreditApplication {
   months_at_address: number | null;
   monthly_housing_payment: string | null;
   prev_address: string | null;
+  prev_years_at_address: number | null;
+  prev_months_at_address: number | null;
   employment_status: string | null;
   employer_name: string | null;
   job_title: string | null;
   work_phone: string | null;
   years_employed: number | null;
   months_employed: number | null;
+  prev_employer_name: string | null;
+  prev_years_employed: number | null;
+  prev_months_employed: number | null;
+  no_prev_employer: boolean;
   gross_monthly_income: string | null;
   other_income: string | null;
   other_income_source: string | null;
@@ -336,9 +376,32 @@ export interface CreditApplication {
   co_ssn_last4: string | null;
   co_email: string | null;
   co_phone: string | null;
-  co_employer_name: string | null;
-  co_gross_monthly_income: string | null;
   co_relationship: string | null;
+  co_drivers_license: string | null;
+  co_other_income: string | null;
+  co_other_income_source: string | null;
+  co_address: string | null;
+  co_city: string | null;
+  co_state: string | null;
+  co_zip: string | null;
+  co_housing_status: string | null;
+  co_monthly_housing_payment: string | null;
+  co_years_at_address: number | null;
+  co_months_at_address: number | null;
+  co_prev_address: string | null;
+  co_prev_years_at_address: number | null;
+  co_prev_months_at_address: number | null;
+  co_employment_status: string | null;
+  co_employer_name: string | null;
+  co_job_title: string | null;
+  co_work_phone: string | null;
+  co_years_employed: number | null;
+  co_months_employed: number | null;
+  co_prev_employer_name: string | null;
+  co_prev_years_employed: number | null;
+  co_prev_months_employed: number | null;
+  co_no_prev_employer: boolean;
+  co_gross_monthly_income: string | null;
   vehicle_id: string | null;
   vin: string | null;
   stock_number: string | null;

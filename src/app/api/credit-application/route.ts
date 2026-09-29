@@ -46,6 +46,8 @@ const creditAppSchema = z.object({
   months_at_address: digits.optional().or(z.literal("")),
   monthly_housing_payment: z.string().trim().max(40).optional(),
   prev_address: z.string().trim().max(200).optional(),
+  prev_years_at_address: digits.optional().or(z.literal("")),
+  prev_months_at_address: digits.optional().or(z.literal("")),
 
   employment_status: z
     .enum(["employed", "self_employed", "retired", "military", "other"])
@@ -55,6 +57,10 @@ const creditAppSchema = z.object({
   work_phone: z.string().trim().max(30).optional(),
   years_employed: digits.optional().or(z.literal("")),
   months_employed: digits.optional().or(z.literal("")),
+  prev_employer_name: z.string().trim().max(150).optional(),
+  prev_years_employed: digits.optional().or(z.literal("")),
+  prev_months_employed: digits.optional().or(z.literal("")),
+  no_prev_employer: z.boolean().optional(),
   gross_monthly_income: z.string().trim().min(1, "Monthly income is required").max(40),
   other_income: z.string().trim().max(40).optional(),
   other_income_source: z.string().trim().max(150).optional(),
@@ -66,9 +72,35 @@ const creditAppSchema = z.object({
   co_ssn: z.string().trim().refine(hasNineDigits, "Enter a valid co-applicant SSN").optional().or(z.literal("")),
   co_email: z.string().trim().email().max(254).optional().or(z.literal("")),
   co_phone: z.string().trim().max(30).optional(),
-  co_employer_name: z.string().trim().max(150).optional(),
-  co_gross_monthly_income: z.string().trim().max(40).optional(),
   co_relationship: z.string().trim().max(60).optional(),
+  co_drivers_license: z.string().trim().max(40).optional(),
+  co_other_income: z.string().trim().max(40).optional(),
+  co_other_income_source: z.string().trim().max(150).optional(),
+  co_same_address: z.boolean().optional(),
+  co_address: z.string().trim().max(200).optional(),
+  co_city: z.string().trim().max(100).optional(),
+  co_state: z.string().trim().max(40).optional(),
+  co_zip: z.string().trim().max(15).optional(),
+  co_housing_status: z.enum(["own", "rent", "other"]).optional(),
+  co_monthly_housing_payment: z.string().trim().max(40).optional(),
+  co_years_at_address: digits.optional().or(z.literal("")),
+  co_months_at_address: digits.optional().or(z.literal("")),
+  co_prev_address: z.string().trim().max(200).optional(),
+  co_prev_years_at_address: digits.optional().or(z.literal("")),
+  co_prev_months_at_address: digits.optional().or(z.literal("")),
+  co_employment_status: z
+    .enum(["employed", "self_employed", "retired", "military", "other"])
+    .optional(),
+  co_employer_name: z.string().trim().max(150).optional(),
+  co_job_title: z.string().trim().max(100).optional(),
+  co_work_phone: z.string().trim().max(30).optional(),
+  co_years_employed: digits.optional().or(z.literal("")),
+  co_months_employed: digits.optional().or(z.literal("")),
+  co_prev_employer_name: z.string().trim().max(150).optional(),
+  co_prev_years_employed: digits.optional().or(z.literal("")),
+  co_prev_months_employed: digits.optional().or(z.literal("")),
+  co_no_prev_employer: z.boolean().optional(),
+  co_gross_monthly_income: z.string().trim().max(40).optional(),
 
   vehicle_id: z.string().trim().max(100).optional(),
   vin: z.string().trim().max(200).optional(),
@@ -95,22 +127,62 @@ const creditAppSchema = z.object({
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
       }
     };
+    // Under 2 years (24 months) at the address or on the job means the lender
+    // wants the one before it too — same rule the form enforces.
+    const months = (y?: string, m?: string) =>
+      (parseInt(y || "0", 10) || 0) * 12 + (parseInt(m || "0", 10) || 0);
+
     if (v.employment_status !== "retired") {
       need("employer_name", v.employer_name, "Employer is required");
       need("job_title", v.job_title, "Job title is required");
       need("years_employed", v.years_employed, "Time on the job is required");
+      if (months(v.years_employed, v.months_employed) < 24 && !v.no_prev_employer) {
+        need("prev_employer_name", v.prev_employer_name, "Previous employer is required (or check the box if you have none)");
+        need("prev_years_employed", v.prev_years_employed, "Time at previous employer is required");
+      }
     }
+    if (months(v.years_at_address, v.months_at_address) < 24) {
+      need("prev_address", v.prev_address, "Previous address is required");
+      need("prev_years_at_address", v.prev_years_at_address, "Time at previous address is required");
+    }
+    need("requested_down_payment", v.requested_down_payment, "Down payment is required — enter 0 if none");
+    if (v.requested_down_payment && !/\d/.test(v.requested_down_payment)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["requested_down_payment"],
+        message: "Enter a dollar amount (0 if none)",
+      });
+    }
+
     if (v.has_co_applicant) {
       need("co_first_name", v.co_first_name, "Co-applicant first name is required");
       need("co_last_name", v.co_last_name, "Co-applicant last name is required");
       need("co_dob", v.co_dob, "Co-applicant date of birth is required");
       need("co_ssn", v.co_ssn, "Co-applicant SSN is required");
       need("co_phone", v.co_phone, "Co-applicant phone is required");
+      need("co_address", v.co_address, "Co-applicant address is required");
+      need("co_city", v.co_city, "Co-applicant city is required");
+      need("co_state", v.co_state, "Co-applicant state is required");
+      need("co_zip", v.co_zip, "Co-applicant ZIP is required");
+      need("co_years_at_address", v.co_years_at_address, "Co-applicant time at address is required");
+      if (months(v.co_years_at_address, v.co_months_at_address) < 24) {
+        need("co_prev_address", v.co_prev_address, "Co-applicant previous address is required");
+        need("co_prev_years_at_address", v.co_prev_years_at_address, "Co-applicant time at previous address is required");
+      }
       need(
         "co_gross_monthly_income",
         v.co_gross_monthly_income,
         "Co-applicant income is required"
       );
+      if (v.co_employment_status !== "retired") {
+        need("co_employer_name", v.co_employer_name, "Co-applicant employer is required");
+        need("co_job_title", v.co_job_title, "Co-applicant job title is required");
+        need("co_years_employed", v.co_years_employed, "Co-applicant time on the job is required");
+        if (months(v.co_years_employed, v.co_months_employed) < 24 && !v.co_no_prev_employer) {
+          need("co_prev_employer_name", v.co_prev_employer_name, "Co-applicant previous employer is required (or check the box if none)");
+          need("co_prev_years_employed", v.co_prev_years_employed, "Co-applicant time at previous employer is required");
+        }
+      }
     }
   });
 
@@ -300,9 +372,45 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       dc_pushed_at: dcResult.success ? new Date().toISOString() : null,
     };
 
+    // Previous address/employer + the co-applicant's own address & job.
+    const co = app.has_co_applicant === true;
+    const detailRow = {
+      prev_years_at_address: numOrNull(app.prev_years_at_address),
+      prev_months_at_address: numOrNull(app.prev_months_at_address),
+      prev_employer_name: app.prev_employer_name || null,
+      prev_years_employed: numOrNull(app.prev_years_employed),
+      prev_months_employed: numOrNull(app.prev_months_employed),
+      no_prev_employer: app.no_prev_employer === true,
+      co_address: co ? app.co_address || null : null,
+      co_city: co ? app.co_city || null : null,
+      co_state: co ? app.co_state || null : null,
+      co_zip: co ? app.co_zip || null : null,
+      co_housing_status: co ? app.co_housing_status ?? null : null,
+      co_monthly_housing_payment: co ? app.co_monthly_housing_payment || null : null,
+      co_years_at_address: co ? numOrNull(app.co_years_at_address) : null,
+      co_months_at_address: co ? numOrNull(app.co_months_at_address) : null,
+      co_prev_address: co ? app.co_prev_address || null : null,
+      co_prev_years_at_address: co ? numOrNull(app.co_prev_years_at_address) : null,
+      co_prev_months_at_address: co ? numOrNull(app.co_prev_months_at_address) : null,
+      co_employment_status: co ? app.co_employment_status ?? null : null,
+      co_job_title: co ? app.co_job_title || null : null,
+      co_work_phone: co ? app.co_work_phone || null : null,
+      co_years_employed: co ? numOrNull(app.co_years_employed) : null,
+      co_months_employed: co ? numOrNull(app.co_months_employed) : null,
+      co_prev_employer_name: co ? app.co_prev_employer_name || null : null,
+      co_prev_years_employed: co ? numOrNull(app.co_prev_years_employed) : null,
+      co_prev_months_employed: co ? numOrNull(app.co_prev_months_employed) : null,
+      co_no_prev_employer: co && app.co_no_prev_employer === true,
+      co_drivers_license: co ? app.co_drivers_license || null : null,
+      co_other_income: co ? app.co_other_income || null : null,
+      co_other_income_source: co ? app.co_other_income_source || null : null,
+    };
+
+    const fullRow = { ...creditAppRow, ...detailRow };
+
     const { data: creditApp, error: caErr } = await supabase
       .from("credit_applications")
-      .insert(creditAppRow)
+      .insert(fullRow)
       .select("id, created_at, signed_at")
       .single();
     if (caErr) {
@@ -319,7 +427,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     if (creditApp) {
       const identifiers = creditApp as { id: string; created_at: string; signed_at: string | null };
       const dmsResult = await pushCreditAppToDms({
-        ...creditAppRow,
+        ...fullRow,
         id: identifiers.id,
         created_at: identifiers.created_at,
         signed_at: identifiers.signed_at,

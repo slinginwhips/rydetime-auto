@@ -356,6 +356,7 @@ export default async function AdminLeadDetailPage({
                     />
                     <Field label="Housing Payment" value={creditApp.monthly_housing_payment} />
                     <Field label="Previous Address" value={creditApp.prev_address} />
+                    <Field label="Time at Previous Address" value={[creditApp.prev_years_at_address && `${creditApp.prev_years_at_address} yr`, creditApp.prev_months_at_address && `${creditApp.prev_months_at_address} mo`].filter(Boolean).join(" ") || null} />
                   </dl>
 
                   <h3 className="mt-5 text-xs font-semibold uppercase tracking-widest text-accent">
@@ -370,6 +371,8 @@ export default async function AdminLeadDetailPage({
                       label="Time on Job"
                       value={[creditApp.years_employed && `${creditApp.years_employed} yr`, creditApp.months_employed && `${creditApp.months_employed} mo`].filter(Boolean).join(" ") || null}
                     />
+                    <Field label="Previous Employer" value={creditApp.no_prev_employer ? "None (first job)" : creditApp.prev_employer_name} />
+                    <Field label="Time at Previous Employer" value={[creditApp.prev_years_employed && `${creditApp.prev_years_employed} yr`, creditApp.prev_months_employed && `${creditApp.prev_months_employed} mo`].filter(Boolean).join(" ") || null} />
                     <Field label="Gross Monthly Income" value={creditApp.gross_monthly_income} />
                     <Field label="Other Income" value={creditApp.other_income} />
                     <Field label="Other Income Source" value={creditApp.other_income_source} />
@@ -384,11 +387,29 @@ export default async function AdminLeadDetailPage({
                         <Field label="Name" value={`${creditApp.co_first_name} ${creditApp.co_last_name ?? ""}`.trim()} />
                         <Field label="Relationship" value={creditApp.co_relationship} />
                         <Field label="Date of Birth" value={creditApp.co_dob} />
+                        <Field label="Driver's License" value={creditApp.co_drivers_license} />
                         <Field label="SSN" value={creditApp.co_ssn_last4 ? `***-**-${creditApp.co_ssn_last4}` : null} />
                         <Field label="Phone" value={creditApp.co_phone} />
                         <Field label="Email" value={creditApp.co_email} />
+                        <Field
+                          label="Address"
+                          value={[creditApp.co_address, creditApp.co_city, creditApp.co_state, creditApp.co_zip].filter(Boolean).join(", ") || null}
+                        />
+                        <Field label="Housing" value={creditApp.co_housing_status} />
+                        <Field label="Time at Address" value={[creditApp.co_years_at_address && `${creditApp.co_years_at_address} yr`, creditApp.co_months_at_address && `${creditApp.co_months_at_address} mo`].filter(Boolean).join(" ") || null} />
+                        <Field label="Housing Payment" value={creditApp.co_monthly_housing_payment} />
+                        <Field label="Previous Address" value={creditApp.co_prev_address} />
+                        <Field label="Time at Previous Address" value={[creditApp.co_prev_years_at_address && `${creditApp.co_prev_years_at_address} yr`, creditApp.co_prev_months_at_address && `${creditApp.co_prev_months_at_address} mo`].filter(Boolean).join(" ") || null} />
+                        <Field label="Employment Status" value={creditApp.co_employment_status} />
                         <Field label="Employer" value={creditApp.co_employer_name} />
+                        <Field label="Job Title" value={creditApp.co_job_title} />
+                        <Field label="Work Phone" value={creditApp.co_work_phone} />
+                        <Field label="Time on Job" value={[creditApp.co_years_employed && `${creditApp.co_years_employed} yr`, creditApp.co_months_employed && `${creditApp.co_months_employed} mo`].filter(Boolean).join(" ") || null} />
+                        <Field label="Previous Employer" value={creditApp.co_no_prev_employer ? "None (first job)" : creditApp.co_prev_employer_name} />
+                        <Field label="Time at Previous Employer" value={[creditApp.co_prev_years_employed && `${creditApp.co_prev_years_employed} yr`, creditApp.co_prev_months_employed && `${creditApp.co_prev_months_employed} mo`].filter(Boolean).join(" ") || null} />
                         <Field label="Monthly Income" value={creditApp.co_gross_monthly_income} />
+                        <Field label="Other Income" value={creditApp.co_other_income} />
+                        <Field label="Other Income Source" value={creditApp.co_other_income_source} />
                       </dl>
                     </>
                   )}

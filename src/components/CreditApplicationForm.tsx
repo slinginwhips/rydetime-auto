@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type FieldPath, type UseFormReturn } from "react-hook-form";
 import Link from "next/link";
 import type { CreditApplicationSubmission } from "@/types/lead";
 import { CREDIT_APP_AUTHORIZATION_TEXT, SMS_CONSENT_DISCLOSURE } from "@/types/lead";
@@ -121,6 +121,221 @@ function SectionCard({
   );
 }
 
+type Form = UseFormReturn<FormValues>;
+type Key = FieldPath<FormValues>;
+
+// The applicant and the co-applicant are asked the exact same address and job
+// questions, so both render through these components: `p` is "" for the
+// applicant and "co_" for the co-applicant.
+const key = (p: string, name: string) => `${p}${name}` as Key;
+
+const fieldError = (form: Form, k: Key) =>
+  (form.formState.errors[k] as { message?: string } | undefined)?.message;
+
+const totalMonths = (years: unknown, months: unknown) =>
+  (parseInt(String(years ?? "") || "0", 10) || 0) * 12 + (parseInt(String(months ?? "") || "0", 10) || 0);
+
+/** Years + months pair, used for every "how long" question. */
+function TimeInputs({
+  form, p, yearsName, monthsName, label,
+}: {
+  form: Form; p: string; yearsName: string; monthsName: string; label: string;
+}) {
+  const yk = key(p, yearsName);
+  const mk = key(p, monthsName);
+  const err = fieldError(form, yk) ?? fieldError(form, mk);
+  return (
+    <div>
+      <span className={labelClass}>{label} *</span>
+      <div className="grid grid-cols-2 gap-4">
+        <input id={`ca-${p}${yearsName}`} inputMode="numeric" maxLength={2} autoComplete="off"
+          placeholder="Years" aria-label={`${label} — years`} className={inputClass}
+          {...form.register(yk, {
+            required: `${label}: enter the years (0 is fine)`,
+            ...digitRule("Years must be a number"),
+          })} />
+        <input id={`ca-${p}${monthsName}`} inputMode="numeric" maxLength={2} autoComplete="off"
+          placeholder="Months" aria-label={`${label} — months`} className={inputClass}
+          {...form.register(mk, digitRule("Months must be a number"))} />
+      </div>
+      {err && <p className={errClass}>{err}</p>}
+    </div>
+  );
+}
+
+function ResidenceFields({ form, p, hideAddress = false }: { form: Form; p: string; hideAddress?: boolean }) {
+  const { register, watch } = form;
+  const years = watch(key(p, "years_at_address"));
+  const months = watch(key(p, "months_at_address"));
+  // Lenders want two years of address history. Wait until they've typed the
+  // years so the box doesn't flash open on an empty form.
+  const needPrev = String(years ?? "") !== "" && totalMonths(years, months) < 24;
+  const e = (name: string) => fieldError(form, key(p, name));
+
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-6">
+      {!hideAddress && (
+        <>
+          <div className="sm:col-span-6">
+            <label htmlFor={`ca-${p}addr`} className={labelClass}>Street address *</label>
+            <input id={`ca-${p}addr`} autoComplete="street-address" className={inputClass}
+              {...register(key(p, "address"), { required: "Address is required" })} />
+            {e("address") && <p className={errClass}>{e("address")}</p>}
+          </div>
+          <div className="sm:col-span-3">
+            <label htmlFor={`ca-${p}city`} className={labelClass}>City *</label>
+            <input id={`ca-${p}city`} autoComplete="address-level2" className={inputClass}
+              {...register(key(p, "city"), { required: "City is required" })} />
+            {e("city") && <p className={errClass}>{e("city")}</p>}
+          </div>
+          <div className="sm:col-span-1">
+            <label htmlFor={`ca-${p}state`} className={labelClass}>State *</label>
+            <input id={`ca-${p}state`} autoComplete="address-level1" maxLength={2} placeholder="VA"
+              className={inputClass} {...register(key(p, "state"), { required: "State" })} />
+            {e("state") && <p className={errClass}>{e("state")}</p>}
+          </div>
+          <div className="sm:col-span-2">
+            <label htmlFor={`ca-${p}zip`} className={labelClass}>ZIP *</label>
+            <input id={`ca-${p}zip`} inputMode="numeric" autoComplete="postal-code" maxLength={10}
+              className={inputClass} {...register(key(p, "zip"), { required: "ZIP is required" })} />
+            {e("zip") && <p className={errClass}>{e("zip")}</p>}
+          </div>
+        </>
+      )}
+      <div className="sm:col-span-2">
+        <label htmlFor={`ca-${p}housing`} className={labelClass}>Own or rent? *</label>
+        <select id={`ca-${p}housing`} className={inputClass} {...register(key(p, "housing_status"))}>
+          <option value="own">Own</option>
+          <option value="rent">Rent</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div className="sm:col-span-2">
+        <label htmlFor={`ca-${p}house-pmt`} className={labelClass}>Monthly rent/mortgage</label>
+        <input id={`ca-${p}house-pmt`} inputMode="numeric" placeholder="$" className={inputClass}
+          {...register(key(p, "monthly_housing_payment"))} />
+      </div>
+      <div className="sm:col-span-2">
+        <TimeInputs form={form} p={p} yearsName="years_at_address" monthsName="months_at_address"
+          label="Time at this address" />
+      </div>
+      {needPrev && (
+        <>
+          <p className="text-xs text-text-muted sm:col-span-6">
+            Less than 2 years at this address — lenders need the previous one too.
+          </p>
+          <div className="sm:col-span-4">
+            <label htmlFor={`ca-${p}prev-addr`} className={labelClass}>Previous address *</label>
+            <input id={`ca-${p}prev-addr`} placeholder="Street, city, state, ZIP" className={inputClass}
+              {...register(key(p, "prev_address"), { required: "Previous address is required" })} />
+            {e("prev_address") && <p className={errClass}>{e("prev_address")}</p>}
+          </div>
+          <div className="sm:col-span-2">
+            <TimeInputs form={form} p={p} yearsName="prev_years_at_address" monthsName="prev_months_at_address"
+              label="Time at previous address" />
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function EmploymentFields({
+  form, p,
+}: { form: Form; p: string }) {
+  const { register, watch } = form;
+  const status = watch(key(p, "employment_status"));
+  const years = watch(key(p, "years_employed"));
+  const months = watch(key(p, "months_employed"));
+  const noPrev = watch(key(p, "no_prev_employer"));
+  const working = status !== "retired";
+  const needPrev = working && String(years ?? "") !== "" && totalMonths(years, months) < 24;
+  const e = (name: string) => fieldError(form, key(p, name));
+
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-6">
+      <div className="sm:col-span-3">
+        <label htmlFor={`ca-${p}emp-status`} className={labelClass}>Employment status *</label>
+        <select id={`ca-${p}emp-status`} className={inputClass} {...register(key(p, "employment_status"))}>
+          <option value="employed">Employed</option>
+          <option value="self_employed">Self-employed</option>
+          <option value="retired">Retired</option>
+          <option value="military">Military</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div className="sm:col-span-3">
+        <label htmlFor={`ca-${p}income`} className={labelClass}>Gross monthly income *</label>
+        <input id={`ca-${p}income`} inputMode="numeric" placeholder="$ before taxes" className={inputClass}
+          {...register(key(p, "gross_monthly_income"), { required: "Monthly income is required" })} />
+        {e("gross_monthly_income") && <p className={errClass}>{e("gross_monthly_income")}</p>}
+      </div>
+      {working && (
+        <>
+          <div className="sm:col-span-3">
+            <label htmlFor={`ca-${p}employer`} className={labelClass}>Employer *</label>
+            <input id={`ca-${p}employer`} autoComplete="organization" className={inputClass}
+              {...register(key(p, "employer_name"), { required: "Employer is required" })} />
+            {e("employer_name") && <p className={errClass}>{e("employer_name")}</p>}
+          </div>
+          <div className="sm:col-span-3">
+            <label htmlFor={`ca-${p}title`} className={labelClass}>Job title *</label>
+            <input id={`ca-${p}title`} autoComplete="organization-title" className={inputClass}
+              {...register(key(p, "job_title"), { required: "Job title is required" })} />
+            {e("job_title") && <p className={errClass}>{e("job_title")}</p>}
+          </div>
+          <div className="sm:col-span-3">
+            <label htmlFor={`ca-${p}work-phone`} className={labelClass}>Work phone</label>
+            <input id={`ca-${p}work-phone`} type="tel" className={inputClass}
+              {...register(key(p, "work_phone"))} />
+          </div>
+          <div className="sm:col-span-3">
+            <TimeInputs form={form} p={p} yearsName="years_employed" monthsName="months_employed"
+              label="Time on this job" />
+          </div>
+          {needPrev && (
+            <>
+              <p className="text-xs text-text-muted sm:col-span-6">
+                Less than 2 years on this job — lenders need the previous one too.
+              </p>
+              <label className="flex cursor-pointer items-center gap-3 sm:col-span-6">
+                <input type="checkbox" className="h-4 w-4 accent-accent"
+                  {...register(key(p, "no_prev_employer"))} />
+                <span className="text-sm text-text-primary">
+                  No previous employer (this is my first job)
+                </span>
+              </label>
+              {!noPrev && (
+                <>
+                  <div className="sm:col-span-3">
+                    <label htmlFor={`ca-${p}prev-employer`} className={labelClass}>Previous employer *</label>
+                    <input id={`ca-${p}prev-employer`} className={inputClass}
+                      {...register(key(p, "prev_employer_name"), { required: "Previous employer is required" })} />
+                    {e("prev_employer_name") && <p className={errClass}>{e("prev_employer_name")}</p>}
+                  </div>
+                  <div className="sm:col-span-3">
+                    <TimeInputs form={form} p={p} yearsName="prev_years_employed" monthsName="prev_months_employed"
+                      label="Time at previous employer" />
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </>
+      )}
+      <div className="sm:col-span-3">
+        <label htmlFor={`ca-${p}other-income`} className={labelClass}>Other monthly income</label>
+        <input id={`ca-${p}other-income`} inputMode="numeric" placeholder="$ (optional)" className={inputClass}
+          {...register(key(p, "other_income"))} />
+      </div>
+      <div className="sm:col-span-3">
+        <label htmlFor={`ca-${p}other-src`} className={labelClass}>Source of other income</label>
+        <input id={`ca-${p}other-src`} className={inputClass} {...register(key(p, "other_income_source"))} />
+      </div>
+    </div>
+  );
+}
+
 export default function CreditApplicationForm({
   vehicleId,
   vehicleLabel,
@@ -138,21 +353,27 @@ export default function CreditApplicationForm({
   }, [status]);
   const [pickedVehicleId, setPickedVehicleId] = useState<string | undefined>(undefined);
   const [showOtherVin, setShowOtherVin] = useState(false);
+  const form = useForm<FormValues>({
+    // Hidden sections (retired applicants, no co-applicant) must not keep
+    // validating or submitting stale values after they unmount.
+    shouldUnregister: true,
+    defaultValues: {
+      housing_status: "rent",
+      employment_status: "employed",
+      co_housing_status: "rent",
+      co_employment_status: "employed",
+    },
+  });
   const {
     register,
     handleSubmit,
     watch,
     setValue,
     formState: { errors },
-  } = useForm<FormValues>({
-    // Hidden sections (retired applicants, no co-applicant) must not keep
-    // validating or submitting stale values after they unmount.
-    shouldUnregister: true,
-    defaultValues: { housing_status: "rent", employment_status: "employed" },
-  });
+  } = form;
 
   const hasCo = watch("has_co_applicant");
-  const empStatus = watch("employment_status");
+  const coSameAddress = watch("co_same_address");
 
   const onSubmit = async (values: FormValues) => {
     if (values._hp) {
@@ -164,6 +385,11 @@ export default function CreditApplicationForm({
     try {
       const body: CreditApplicationSubmission = {
         ...values,
+        // "Same address as mine": the co-applicant's address inputs are hidden,
+        // so fill them from the applicant's here.
+        ...(values.has_co_applicant && values.co_same_address
+          ? { co_address: values.address, co_city: values.city, co_state: values.state, co_zip: values.zip }
+          : {}),
         vehicle_id: pickedVehicleId ?? vehicleId,
         vin: values.vin || undefined,
         source_url: typeof window !== "undefined" ? window.location.href : undefined,
@@ -342,144 +568,12 @@ export default function CreditApplicationForm({
 
       {/* 2 — Residence */}
       <SectionCard step={2} title="Where you live" subtitle="Your current home address.">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-6">
-            <label htmlFor="ca-addr" className={labelClass}>Street address *</label>
-            <input id="ca-addr" autoComplete="street-address" className={inputClass}
-              {...register("address", { required: "Address is required" })} />
-            {errors.address && <p className={errClass}>{errors.address.message}</p>}
-          </div>
-          <div className="sm:col-span-3">
-            <label htmlFor="ca-city" className={labelClass}>City *</label>
-            <input id="ca-city" autoComplete="address-level2" className={inputClass}
-              {...register("city", { required: "City is required" })} />
-            {errors.city && <p className={errClass}>{errors.city.message}</p>}
-          </div>
-          <div className="sm:col-span-1">
-            <label htmlFor="ca-state" className={labelClass}>State *</label>
-            <input id="ca-state" autoComplete="address-level1" maxLength={2} placeholder="VA"
-              className={inputClass} {...register("state", { required: "State" })} />
-            {errors.state && <p className={errClass}>{errors.state.message}</p>}
-          </div>
-          <div className="sm:col-span-2">
-            <label htmlFor="ca-zip" className={labelClass}>ZIP *</label>
-            <input id="ca-zip" inputMode="numeric" autoComplete="postal-code" maxLength={10}
-              className={inputClass} {...register("zip", { required: "ZIP is required" })} />
-            {errors.zip && <p className={errClass}>{errors.zip.message}</p>}
-          </div>
-          <div className="sm:col-span-2">
-            <label htmlFor="ca-housing" className={labelClass}>Own or rent? *</label>
-            <select id="ca-housing" className={inputClass} {...register("housing_status")}>
-              <option value="own">Own</option>
-              <option value="rent">Rent</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          <div className="sm:col-span-2">
-            <label htmlFor="ca-house-pmt" className={labelClass}>Monthly rent/mortgage</label>
-            <input id="ca-house-pmt" inputMode="numeric" placeholder="$" className={inputClass}
-              {...register("monthly_housing_payment")} />
-          </div>
-          <div className="sm:col-span-2">
-            <span className={labelClass}>How long you've lived here *</span>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <input id="ca-yrs-home" inputMode="numeric" maxLength={2} autoComplete="nope"
-                  placeholder="Years" aria-label="Years living here" className={inputClass}
-                  {...register("years_at_address", {
-                    required: "How long you've lived here is required",
-                    ...digitRule("Years must be a number"),
-                  })} />
-              </div>
-              <div>
-                <input id="ca-mos-home" inputMode="numeric" maxLength={2} autoComplete="nope"
-                  placeholder="Months" aria-label="Additional months living here" className={inputClass}
-                  {...register("months_at_address", digitRule("Months must be a number"))} />
-              </div>
-            </div>
-            {(errors.years_at_address || errors.months_at_address) && (
-              <p className={errClass}>
-                {errors.years_at_address?.message ?? errors.months_at_address?.message}
-              </p>
-            )}
-          </div>
-          <div className="sm:col-span-6">
-            <label htmlFor="ca-prev-addr" className={labelClass}>
-              Previous address <span className="font-normal text-text-muted">(if less than 2 years above)</span>
-            </label>
-            <input id="ca-prev-addr" className={inputClass} {...register("prev_address")} />
-          </div>
-        </div>
+        <ResidenceFields form={form} p="" />
       </SectionCard>
 
       {/* 3 — Employment & income */}
       <SectionCard step={3} title="Work &amp; income" subtitle="How you earn — steady income is what lenders look for most.">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-6">
-          <div className="sm:col-span-3">
-            <label htmlFor="ca-emp-status" className={labelClass}>Employment status *</label>
-            <select id="ca-emp-status" className={inputClass} {...register("employment_status")}>
-              <option value="employed">Employed</option>
-              <option value="self_employed">Self-employed</option>
-              <option value="retired">Retired</option>
-              <option value="military">Military</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          <div className="sm:col-span-3">
-            <label htmlFor="ca-income" className={labelClass}>Gross monthly income *</label>
-            <input id="ca-income" inputMode="numeric" placeholder="$ before taxes" className={inputClass}
-              {...register("gross_monthly_income", { required: "Monthly income is required" })} />
-            {errors.gross_monthly_income && <p className={errClass}>{errors.gross_monthly_income.message}</p>}
-          </div>
-          {empStatus !== "retired" && (
-            <>
-              <div className="sm:col-span-3">
-                <label htmlFor="ca-employer" className={labelClass}>Employer *</label>
-                <input id="ca-employer" autoComplete="organization" className={inputClass}
-                  {...register("employer_name", { required: "Employer is required" })} />
-                {errors.employer_name && <p className={errClass}>{errors.employer_name.message}</p>}
-              </div>
-              <div className="sm:col-span-3">
-                <label htmlFor="ca-title" className={labelClass}>Job title *</label>
-                <input id="ca-title" autoComplete="organization-title" className={inputClass}
-                  {...register("job_title", { required: "Job title is required" })} />
-                {errors.job_title && <p className={errClass}>{errors.job_title.message}</p>}
-              </div>
-              <div className="sm:col-span-3">
-                <label htmlFor="ca-work-phone" className={labelClass}>Work phone</label>
-                <input id="ca-work-phone" type="tel" className={inputClass} {...register("work_phone")} />
-              </div>
-              <div className="sm:col-span-3">
-                <span className={labelClass}>Time on this job *</span>
-                <div className="grid grid-cols-2 gap-4">
-                  <input id="ca-yrs-emp" inputMode="numeric" maxLength={2} autoComplete="off"
-                    placeholder="Years" aria-label="Years on this job" className={inputClass}
-                    {...register("years_employed", {
-                      required: "How long you've been on the job is required",
-                      ...digitRule("Years must be a number"),
-                    })} />
-                  <input id="ca-mos-emp" inputMode="numeric" maxLength={2} autoComplete="off"
-                    placeholder="Months" aria-label="Additional months on this job" className={inputClass}
-                    {...register("months_employed", digitRule("Months must be a number"))} />
-                </div>
-                {(errors.years_employed || errors.months_employed) && (
-                  <p className={errClass}>
-                    {errors.years_employed?.message ?? errors.months_employed?.message}
-                  </p>
-                )}
-              </div>
-            </>
-          )}
-          <div className="sm:col-span-3">
-            <label htmlFor="ca-other-income" className={labelClass}>Other monthly income</label>
-            <input id="ca-other-income" inputMode="numeric" placeholder="$ (optional)" className={inputClass}
-              {...register("other_income")} />
-          </div>
-          <div className="sm:col-span-3">
-            <label htmlFor="ca-other-src" className={labelClass}>Source of other income</label>
-            <input id="ca-other-src" className={inputClass} {...register("other_income_source")} />
-          </div>
-        </div>
+        <EmploymentFields form={form} p="" />
         <p className="mt-3 text-xs text-text-muted">
           You do not have to disclose alimony, child support, or separate maintenance income
           unless you want it considered.
@@ -495,63 +589,71 @@ export default function CreditApplicationForm({
         </label>
 
         {hasCo && (
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="ca-co-first" className={labelClass}>Co-applicant first name *</label>
-              <input id="ca-co-first" className={inputClass}
-                {...register("co_first_name", { required: "Co-applicant first name is required" })} />
-              {errors.co_first_name && <p className={errClass}>{errors.co_first_name.message}</p>}
+          <div className="mt-6 space-y-8">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="ca-co-first" className={labelClass}>Co-applicant first name *</label>
+                <input id="ca-co-first" className={inputClass}
+                  {...register("co_first_name", { required: "Co-applicant first name is required" })} />
+                {errors.co_first_name && <p className={errClass}>{errors.co_first_name.message}</p>}
+              </div>
+              <div>
+                <label htmlFor="ca-co-last" className={labelClass}>Co-applicant last name *</label>
+                <input id="ca-co-last" className={inputClass}
+                  {...register("co_last_name", { required: "Co-applicant last name is required" })} />
+                {errors.co_last_name && <p className={errClass}>{errors.co_last_name.message}</p>}
+              </div>
+              <div>
+                <label htmlFor="ca-co-rel" className={labelClass}>Relationship to you</label>
+                <input id="ca-co-rel" placeholder="Spouse, parent…" className={inputClass}
+                  {...register("co_relationship")} />
+              </div>
+              <div>
+                <label htmlFor="ca-co-phone" className={labelClass}>Co-applicant mobile phone *</label>
+                <input id="ca-co-phone" type="tel" className={inputClass}
+                  {...register("co_phone", { required: "Co-applicant phone is required" })} />
+                {errors.co_phone && <p className={errClass}>{errors.co_phone.message}</p>}
+              </div>
+              <div>
+                <label htmlFor="ca-co-email" className={labelClass}>Co-applicant email</label>
+                <input id="ca-co-email" type="email" className={inputClass} {...register("co_email")} />
+              </div>
+              <div>
+                <label htmlFor="ca-co-dob" className={labelClass}>Co-applicant date of birth *</label>
+                <input id="ca-co-dob" type="date" className={inputClass}
+                  {...register("co_dob", { required: "Co-applicant date of birth is required" })} />
+                {errors.co_dob && <p className={errClass}>{errors.co_dob.message}</p>}
+              </div>
+              <div>
+                <label htmlFor="ca-co-ssn" className={labelClass}>
+                  Co-applicant SSN * <span className="font-normal text-text-muted">🔒 not stored here</span>
+                </label>
+                <input id="ca-co-ssn" inputMode="numeric" autoComplete="off" maxLength={11}
+                  placeholder="000-00-0000" className={inputClass}
+                  {...register("co_ssn", {
+                    required: "Co-applicant SSN is required to check their credit",
+                    pattern: { value: /^\d{3}[-\s]?\d{2}[-\s]?\d{4}$/, message: "Enter a valid 9-digit SSN" },
+                  })} />
+                {errors.co_ssn && <p className={errClass}>{errors.co_ssn.message}</p>}
+              </div>
+              <div>
+                <label htmlFor="ca-co-dl" className={labelClass}>Co-applicant driver&apos;s license #</label>
+                <input id="ca-co-dl" autoComplete="off" className={inputClass} {...register("co_drivers_license")} />
+              </div>
             </div>
+
             <div>
-              <label htmlFor="ca-co-last" className={labelClass}>Co-applicant last name *</label>
-              <input id="ca-co-last" className={inputClass}
-                {...register("co_last_name", { required: "Co-applicant last name is required" })} />
-              {errors.co_last_name && <p className={errClass}>{errors.co_last_name.message}</p>}
-            </div>
-            <div>
-              <label htmlFor="ca-co-rel" className={labelClass}>Relationship to you</label>
-              <input id="ca-co-rel" placeholder="Spouse, parent…" className={inputClass}
-                {...register("co_relationship")} />
-            </div>
-            <div>
-              <label htmlFor="ca-co-phone" className={labelClass}>Co-applicant phone *</label>
-              <input id="ca-co-phone" type="tel" className={inputClass}
-                {...register("co_phone", { required: "Co-applicant phone is required" })} />
-              {errors.co_phone && <p className={errClass}>{errors.co_phone.message}</p>}
-            </div>
-            <div>
-              <label htmlFor="ca-co-email" className={labelClass}>Co-applicant email</label>
-              <input id="ca-co-email" type="email" className={inputClass} {...register("co_email")} />
-            </div>
-            <div>
-              <label htmlFor="ca-co-dob" className={labelClass}>Co-applicant date of birth *</label>
-              <input id="ca-co-dob" type="date" className={inputClass}
-                {...register("co_dob", { required: "Co-applicant date of birth is required" })} />
-              {errors.co_dob && <p className={errClass}>{errors.co_dob.message}</p>}
-            </div>
-            <div>
-              <label htmlFor="ca-co-ssn" className={labelClass}>
-                Co-applicant SSN * <span className="font-normal text-text-muted">🔒 not stored here</span>
+              <h3 className="mb-4 text-sm font-bold text-text-primary">Co-applicant&apos;s home address</h3>
+              <label className="mb-4 flex cursor-pointer items-center gap-3">
+                <input type="checkbox" className="h-4 w-4 accent-accent" {...register("co_same_address")} />
+                <span className="text-sm text-text-primary">Same address as mine</span>
               </label>
-              <input id="ca-co-ssn" inputMode="numeric" autoComplete="off" maxLength={11}
-                placeholder="000-00-0000" className={inputClass}
-                {...register("co_ssn", {
-                  required: "Co-applicant SSN is required to check their credit",
-                  pattern: { value: /^\d{3}[-\s]?\d{2}[-\s]?\d{4}$/, message: "Enter a valid 9-digit SSN" },
-                })} />
-              {errors.co_ssn && <p className={errClass}>{errors.co_ssn.message}</p>}
+              <ResidenceFields form={form} p="co_" hideAddress={!!coSameAddress} />
             </div>
+
             <div>
-              <label htmlFor="ca-co-income" className={labelClass}>Co-applicant monthly income *</label>
-              <input id="ca-co-income" inputMode="numeric" placeholder="$" className={inputClass}
-                {...register("co_gross_monthly_income", { required: "Co-applicant income is required" })} />
-              {errors.co_gross_monthly_income && (
-                <p className={errClass}>{errors.co_gross_monthly_income.message}</p>
-              )}
-            </div>
-            <div className="sm:col-span-2">
-              <label htmlFor="ca-co-employer" className={labelClass}>Co-applicant employer</label>
-              <input id="ca-co-employer" className={inputClass} {...register("co_employer_name")} />
+              <h3 className="mb-4 text-sm font-bold text-text-primary">Co-applicant&apos;s work &amp; income</h3>
+              <EmploymentFields form={form} p="co_" />
             </div>
           </div>
         )}
@@ -609,9 +711,13 @@ export default function CreditApplicationForm({
             </div>
           )}
           <div>
-            <label htmlFor="ca-down" className={labelClass}>Cash down you can put</label>
-            <input id="ca-down" inputMode="numeric" placeholder="$" className={inputClass}
-              {...register("requested_down_payment")} />
+            <label htmlFor="ca-down" className={labelClass}>Cash down you can put *</label>
+            <input id="ca-down" inputMode="numeric" placeholder="$ (type 0 if none)" className={inputClass}
+              {...register("requested_down_payment", {
+                required: "Enter your down payment — type 0 if you have none",
+                pattern: { value: /\d/, message: "Enter a dollar amount (0 if none)" },
+              })} />
+            {errors.requested_down_payment && <p className={errClass}>{errors.requested_down_payment.message}</p>}
           </div>
           <div>
             <label htmlFor="ca-monthly" className={labelClass}>Target monthly payment</label>

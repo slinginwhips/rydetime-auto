@@ -84,7 +84,41 @@ create table if not exists credit_applications (
 -- so it's a backfill-safe alter for existing databases.
 alter table credit_applications add column if not exists sms_consent boolean not null default false;
 
-create index if not exists idx_credit_apps_lead on credit_applications (lead_id);
+-- Previous address/employer detail + full co-applicant mirror. Added after
+-- launch, so backfill-safe alters. RUN THIS BEFORE deploying the matching site
+-- code — the insert names these columns.
+alter table credit_applications
+  add column if not exists prev_years_at_address numeric,
+  add column if not exists prev_months_at_address numeric,
+  add column if not exists prev_employer_name text,
+  add column if not exists prev_years_employed numeric,
+  add column if not exists prev_months_employed numeric,
+  add column if not exists no_prev_employer boolean not null default false,
+  add column if not exists co_address text,
+  add column if not exists co_city text,
+  add column if not exists co_state text,
+  add column if not exists co_zip text,
+  add column if not exists co_housing_status text,
+  add column if not exists co_monthly_housing_payment text,
+  add column if not exists co_years_at_address numeric,
+  add column if not exists co_months_at_address numeric,
+  add column if not exists co_prev_address text,
+  add column if not exists co_prev_years_at_address numeric,
+  add column if not exists co_prev_months_at_address numeric,
+  add column if not exists co_employment_status text,
+  add column if not exists co_job_title text,
+  add column if not exists co_work_phone text,
+  add column if not exists co_years_employed numeric,
+  add column if not exists co_months_employed numeric,
+  add column if not exists co_prev_employer_name text,
+  add column if not exists co_prev_years_employed numeric,
+  add column if not exists co_prev_months_employed numeric,
+  add column if not exists co_no_prev_employer boolean not null default false,
+  add column if not exists co_drivers_license text,
+  add column if not exists co_other_income text,
+  add column if not exists co_other_income_source text;
+
+create index if not exists idx_credit_apps_leadon credit_applications (lead_id);
 create index if not exists idx_credit_apps_created on credit_applications (created_at desc);
 
 -- 3) Lock it down: RLS ON, NO public policies. This denies the public/anon key

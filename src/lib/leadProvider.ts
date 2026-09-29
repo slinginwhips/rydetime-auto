@@ -174,6 +174,9 @@ export function buildCreditAppAdfXml(
   const line = (label: string, v: string | undefined | null) =>
     v && String(v).trim() ? `${label}: ${String(v).trim()}` : null;
 
+  const timeText = (y?: string, m?: string) =>
+    [y && `${y} yr`, m && `${m} mo`].filter(Boolean).join(" ");
+
   const details = [
     "=== SIGNED ONLINE CREDIT APPLICATION (rydetimeauto.com) ===",
     "",
@@ -188,16 +191,21 @@ export function buildCreditAppAdfXml(
     "RESIDENCE",
     line("Address", [app.address, app.city, app.state, app.zip].filter(Boolean).join(", ")),
     line("Housing", app.housing_status),
-    line("Time at address", [app.years_at_address && `${app.years_at_address} yr`, app.months_at_address && `${app.months_at_address} mo`].filter(Boolean).join(" ")),
+    line("Time at address", timeText(app.years_at_address, app.months_at_address)),
     line("Monthly housing payment", app.monthly_housing_payment),
     line("Previous address", app.prev_address),
+    line("Time at previous address", timeText(app.prev_years_at_address, app.prev_months_at_address)),
     "",
     "EMPLOYMENT & INCOME",
     line("Status", app.employment_status),
     line("Employer", app.employer_name),
     line("Title", app.job_title),
     line("Work phone", app.work_phone),
-    line("Time on job", [app.years_employed && `${app.years_employed} yr`, app.months_employed && `${app.months_employed} mo`].filter(Boolean).join(" ")),
+    line("Time on job", timeText(app.years_employed, app.months_employed)),
+    app.no_prev_employer
+      ? "Previous employer: NONE (applicant checked no previous employer)"
+      : line("Previous employer", app.prev_employer_name),
+    line("Time at previous employer", timeText(app.prev_years_employed, app.prev_months_employed)),
     line("Gross monthly income", app.gross_monthly_income),
     line("Other income", app.other_income),
     line("Other income source", app.other_income_source),
@@ -208,11 +216,32 @@ export function buildCreditAppAdfXml(
           line("Name", [app.co_first_name, app.co_last_name].filter(Boolean).join(" ")),
           line("Relationship", app.co_relationship),
           line("DOB", app.co_dob),
+          line("Driver's License", app.co_drivers_license),
           line("SSN", app.co_ssn),
           line("Phone", app.co_phone),
           line("Email", app.co_email),
+          " ",
+          "CO-APPLICANT RESIDENCE",
+          line("Address", [app.co_address, app.co_city, app.co_state, app.co_zip].filter(Boolean).join(", ")),
+          line("Housing", app.co_housing_status),
+          line("Time at address", timeText(app.co_years_at_address, app.co_months_at_address)),
+          line("Monthly housing payment", app.co_monthly_housing_payment),
+          line("Previous address", app.co_prev_address),
+          line("Time at previous address", timeText(app.co_prev_years_at_address, app.co_prev_months_at_address)),
+          " ",
+          "CO-APPLICANT EMPLOYMENT & INCOME",
+          line("Status", app.co_employment_status),
           line("Employer", app.co_employer_name),
+          line("Title", app.co_job_title),
+          line("Work phone", app.co_work_phone),
+          line("Time on job", timeText(app.co_years_employed, app.co_months_employed)),
+          app.co_no_prev_employer
+            ? "Previous employer: NONE (co-applicant checked no previous employer)"
+            : line("Previous employer", app.co_prev_employer_name),
+          line("Time at previous employer", timeText(app.co_prev_years_employed, app.co_prev_months_employed)),
           line("Gross monthly income", app.co_gross_monthly_income),
+          line("Other income", app.co_other_income),
+          line("Other income source", app.co_other_income_source),
         ]
           .filter(Boolean)
           .join("\n")
