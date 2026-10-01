@@ -167,6 +167,8 @@ function ResidenceFields({ form, p, hideAddress = false }: { form: Form; p: stri
   const { register, watch } = form;
   const years = watch(key(p, "years_at_address"));
   const months = watch(key(p, "months_at_address"));
+  // Rent/mortgage is required unless they picked "Other" (e.g. living with family).
+  const paysHousing = watch(key(p, "housing_status")) !== "other";
   // Lenders want two years of address history. Wait until they've typed the
   // years so the box doesn't flash open on an empty form.
   const needPrev = String(years ?? "") !== "" && totalMonths(years, months) < 24;
@@ -211,9 +213,15 @@ function ResidenceFields({ form, p, hideAddress = false }: { form: Form; p: stri
         </select>
       </div>
       <div className="sm:col-span-2">
-        <label htmlFor={`ca-${p}house-pmt`} className={labelClass}>Monthly rent/mortgage</label>
-        <input id={`ca-${p}house-pmt`} inputMode="numeric" placeholder="$" className={inputClass}
-          {...register(key(p, "monthly_housing_payment"))} />
+        <label htmlFor={`ca-${p}house-pmt`} className={labelClass}>Monthly rent/mortgage{paysHousing ? " *" : ""}</label>
+        <input id={`ca-${p}house-pmt`} inputMode="numeric" placeholder={paysHousing ? "$ (0 if none)" : "$"} className={inputClass}
+          {...register(key(p, "monthly_housing_payment"), {
+            // Explicit on both branches: react-hook-form merges rules across
+            // renders, so omitting them wouldn't clear a stale "required".
+            required: paysHousing ? "Enter your monthly rent/mortgage — type 0 if none" : false,
+            pattern: paysHousing ? { value: /d/, message: "Enter a dollar amount (0 if none)" } : undefined,
+          })} />
+        {e("monthly_housing_payment") && <p className={errClass}>{e("monthly_housing_payment")}</p>}
       </div>
       <div className="sm:col-span-2">
         <TimeInputs form={form} p={p} yearsName="years_at_address" monthsName="months_at_address"
@@ -285,9 +293,13 @@ function EmploymentFields({
             {e("job_title") && <p className={errClass}>{e("job_title")}</p>}
           </div>
           <div className="sm:col-span-3">
-            <label htmlFor={`ca-${p}work-phone`} className={labelClass}>Work phone</label>
-            <input id={`ca-${p}work-phone`} type="tel" className={inputClass}
-              {...register(key(p, "work_phone"))} />
+            <label htmlFor={`ca-${p}work-phone`} className={labelClass}>Work phone *</label>
+            <input id={`ca-${p}work-phone`} type="tel" autoComplete="off" className={inputClass}
+              {...register(key(p, "work_phone"), {
+                required: "Work phone is required",
+                validate: (v) => String(v ?? "").replace(/D/g, "").length >= 10 || "Enter a full 10-digit work phone",
+              })} />
+            {e("work_phone") && <p className={errClass}>{e("work_phone")}</p>}
           </div>
           <div className="sm:col-span-3">
             <TimeInputs form={form} p={p} yearsName="years_employed" monthsName="months_employed"

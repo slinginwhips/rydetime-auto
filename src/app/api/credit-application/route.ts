@@ -145,6 +145,18 @@ const creditAppSchema = z.object({
       need("prev_address", v.prev_address, "Previous address is required");
       need("prev_years_at_address", v.prev_years_at_address, "Time at previous address is required");
     }
+    const phoneOk = (s?: string) => (s ?? "").replace(/D/g, "").length >= 10;
+    const rent = (path: string, value: string | undefined, status: string | undefined) => {
+      if (status === "other") return;
+      need(path, value, "Monthly rent/mortgage is required — enter 0 if none");
+      if (value && value.trim() && !/d/.test(value)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message: "Enter a dollar amount (0 if none)" });
+      }
+    };
+    rent("monthly_housing_payment", v.monthly_housing_payment, v.housing_status);
+    if (v.employment_status !== "retired" && !phoneOk(v.work_phone)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["work_phone"], message: "Work phone is required (10 digits)" });
+    }
     need("requested_down_payment", v.requested_down_payment, "Down payment is required — enter 0 if none");
     if (v.requested_down_payment && !/\d/.test(v.requested_down_payment)) {
       ctx.addIssue({
@@ -165,6 +177,10 @@ const creditAppSchema = z.object({
       need("co_state", v.co_state, "Co-applicant state is required");
       need("co_zip", v.co_zip, "Co-applicant ZIP is required");
       need("co_years_at_address", v.co_years_at_address, "Co-applicant time at address is required");
+      rent("co_monthly_housing_payment", v.co_monthly_housing_payment, v.co_housing_status);
+      if (v.co_employment_status !== "retired" && !phoneOk(v.co_work_phone)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["co_work_phone"], message: "Co-applicant work phone is required (10 digits)" });
+      }
       if (months(v.co_years_at_address, v.co_months_at_address) < 24) {
         need("co_prev_address", v.co_prev_address, "Co-applicant previous address is required");
         need("co_prev_years_at_address", v.co_prev_years_at_address, "Co-applicant time at previous address is required");
