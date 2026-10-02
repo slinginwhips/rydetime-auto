@@ -355,7 +355,7 @@ export default async function AdminLeadDetailPage({
                       value={[creditApp.years_at_address && `${creditApp.years_at_address} yr`, creditApp.months_at_address && `${creditApp.months_at_address} mo`].filter(Boolean).join(" ") || null}
                     />
                     <Field label="Housing Payment" value={creditApp.monthly_housing_payment} />
-                    <Field label="Previous Address" value={creditApp.prev_address} />
+                    <Field label="Previous Address" value={[creditApp.prev_address, creditApp.prev_city, creditApp.prev_state, creditApp.prev_zip].filter(Boolean).join(", ") || null} />
                     <Field label="Time at Previous Address" value={[creditApp.prev_years_at_address && `${creditApp.prev_years_at_address} yr`, creditApp.prev_months_at_address && `${creditApp.prev_months_at_address} mo`].filter(Boolean).join(" ") || null} />
                   </dl>
 
@@ -398,7 +398,7 @@ export default async function AdminLeadDetailPage({
                         <Field label="Housing" value={creditApp.co_housing_status} />
                         <Field label="Time at Address" value={[creditApp.co_years_at_address && `${creditApp.co_years_at_address} yr`, creditApp.co_months_at_address && `${creditApp.co_months_at_address} mo`].filter(Boolean).join(" ") || null} />
                         <Field label="Housing Payment" value={creditApp.co_monthly_housing_payment} />
-                        <Field label="Previous Address" value={creditApp.co_prev_address} />
+                        <Field label="Previous Address" value={[creditApp.co_prev_address, creditApp.co_prev_city, creditApp.co_prev_state, creditApp.co_prev_zip].filter(Boolean).join(", ") || null} />
                         <Field label="Time at Previous Address" value={[creditApp.co_prev_years_at_address && `${creditApp.co_prev_years_at_address} yr`, creditApp.co_prev_months_at_address && `${creditApp.co_prev_months_at_address} mo`].filter(Boolean).join(" ") || null} />
                         <Field label="Employment Status" value={creditApp.co_employment_status} />
                         <Field label="Employer" value={creditApp.co_employer_name} />

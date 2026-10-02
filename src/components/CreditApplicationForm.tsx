@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useForm, type FieldPath, type UseFormReturn } from "react-hook-form";
+import { Controller, useForm, type FieldPath, type RegisterOptions, type UseFormReturn } from "react-hook-form";
 import Link from "next/link";
 import type { CreditApplicationSubmission } from "@/types/lead";
 import { CREDIT_APP_AUTHORIZATION_TEXT, SMS_CONSENT_DISCLOSURE } from "@/types/lead";
@@ -37,6 +37,23 @@ const digitRule = (message: string) => ({
   // {0,2} so a blank optional box isn't flagged; `required` handles emptiness.
   pattern: { value: /^\d{0,2}$/, message },
 });
+
+/** Whatever autofill or a paste put in a years/months box, as 0–2 digits. A
+ *  street address ("123 Main St") clears the box rather than leaving "12". */
+const cleanTimeValue = (raw: string) =>
+  /[a-z]/i.test(raw) ? "" : raw.replace(/\D/g, "").slice(0, 2);
+
+// Rent/mortgage, down payment: free text, but there has to be a number in it.
+const DOLLARS = { value: /\d/, message: "Enter a dollar amount (0 if none)" };
+// Autofill can add a ZIP+4 or trailing space; both are fine.
+const ZIP = { value: /^\s*\d{5}(?:[-\s]?\d{4})?\s*$/, message: "Enter a 5-digit ZIP" };
+
+const US_STATES = [
+  "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "DC", "FL", "GA", "HI", "ID", "IL", "IN", "IA",
+  "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM",
+  "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA",
+  "WV", "WI", "WY",
+];
 
 const STEP_TITLES = ["About you", "Where you live", "Work & income", "Co-applicant", "Your deal", "Review & sign"];
 
@@ -135,31 +152,58 @@ const fieldError = (form: Form, k: Key) =>
 const totalMonths = (years: unknown, months: unknown) =>
   (parseInt(String(years ?? "") || "0", 10) || 0) * 12 + (parseInt(String(months ?? "") || "0", 10) || 0);
 
-/** Years + months pair, used for every "how long" question. */
+/**
+ * Years + months pair, used for every "how long" question.
+ *
+ * iPhone Safari decides what to autofill from a box's name, id and label, and
+ * the old ones all said "address" (years_at_address, "Time at this address"),
+ * so tapping a saved address put the street into these boxes. They now go
+ * through a Controller so the DOM name/id can be neutral (`slot`) while the
+ * form value keeps its real key, and anything autofill still drops in is
+ * cleaned on the way in.
+ */
 function TimeInputs({
-  form, p, yearsName, monthsName, label,
+  form, p, yearsName, monthsName, label, slot,
 }: {
-  form: Form; p: string; yearsName: string; monthsName: string; label: string;
+  form: Form; p: string; yearsName: string; monthsName: string; label: string; slot: string;
 }) {
   const yk = key(p, yearsName);
   const mk = key(p, monthsName);
   const err = fieldError(form, yk) ?? fieldError(form, mk);
+  const box = (k: Key, unit: "Years" | "Months", rules: RegisterOptions<FormValues, Key>) => (
+    <Controller control={form.control} name={k} rules={rules}
+      render={({ field }) => (
+        <input id={`ca-${p}${slot}-${unit.toLowerCase()}`} name={`${p}${slot}_${unit.toLowerCase()}`}
+          data-field={k} type="text" inputMode="numeric" pattern="[0-9]*" maxLength={2}
+          autoComplete="off" placeholder={unit} aria-label={`${label} — ${unit.toLowerCase()}`}
+          className={inputClass} ref={field.ref} onBlur={field.onBlur}
+          value={typeof field.value === "string" ? field.value : ""}
+          onChange={(e) => field.onChange(cleanTimeValue(e.target.value))} />
+      )} />
+  );
   return (
     <div>
       <span className={labelClass}>{label} *</span>
       <div className="grid grid-cols-2 gap-4">
-        <input id={`ca-${p}${yearsName}`} inputMode="numeric" maxLength={2} autoComplete="off"
-          placeholder="Years" aria-label={`${label} — years`} className={inputClass}
-          {...form.register(yk, {
-            required: `${label}: enter the years (0 is fine)`,
-            ...digitRule("Years must be a number"),
-          })} />
-        <input id={`ca-${p}${monthsName}`} inputMode="numeric" maxLength={2} autoComplete="off"
-          placeholder="Months" aria-label={`${label} — months`} className={inputClass}
-          {...form.register(mk, digitRule("Months must be a number"))} />
+        {box(yk, "Years", { required: "Enter the years (0 is fine)", ...digitRule("Years must be a number") })}
+        {box(mk, "Months", digitRule("Months must be a number"))}
       </div>
       {err && <p className={errClass}>{err}</p>}
     </div>
+  );
+}
+
+/** State dropdown — a select takes autofill's "Virginia" or "VA" alike, where
+ *  a 2-character text box would keep "Vi". */
+function StateSelect({ form, k, id, autoComplete, message }: {
+  form: Form; k: Key; id: string; autoComplete: string; message: string;
+}) {
+  return (
+    <select id={id} autoComplete={autoComplete} className={inputClass} defaultValue=""
+      {...form.register(k, { required: message })}>
+      <option value="" disabled>—</option>
+      {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+    </select>
   );
 }
 
@@ -192,14 +236,17 @@ function ResidenceFields({ form, p, hideAddress = false }: { form: Form; p: stri
           </div>
           <div className="sm:col-span-1">
             <label htmlFor={`ca-${p}state`} className={labelClass}>State *</label>
-            <input id={`ca-${p}state`} autoComplete="address-level1" maxLength={2} placeholder="VA"
-              className={inputClass} {...register(key(p, "state"), { required: "State" })} />
+            <StateSelect form={form} k={key(p, "state")} id={`ca-${p}state`}
+              autoComplete="address-level1" message="State" />
             {e("state") && <p className={errClass}>{e("state")}</p>}
           </div>
           <div className="sm:col-span-2">
             <label htmlFor={`ca-${p}zip`} className={labelClass}>ZIP *</label>
             <input id={`ca-${p}zip`} inputMode="numeric" autoComplete="postal-code" maxLength={10}
-              className={inputClass} {...register(key(p, "zip"), { required: "ZIP is required" })} />
+              className={inputClass} {...register(key(p, "zip"), {
+                required: "ZIP is required",
+                pattern: ZIP,
+              })} />
             {e("zip") && <p className={errClass}>{e("zip")}</p>}
           </div>
         </>
@@ -219,28 +266,52 @@ function ResidenceFields({ form, p, hideAddress = false }: { form: Form; p: stri
             // Explicit on both branches: react-hook-form merges rules across
             // renders, so omitting them wouldn't clear a stale "required".
             required: paysHousing ? "Enter your monthly rent/mortgage — type 0 if none" : false,
-            pattern: paysHousing ? { value: /d/, message: "Enter a dollar amount (0 if none)" } : undefined,
+            pattern: paysHousing ? DOLLARS : undefined,
           })} />
         {e("monthly_housing_payment") && <p className={errClass}>{e("monthly_housing_payment")}</p>}
       </div>
       <div className="sm:col-span-2">
-        <TimeInputs form={form} p={p} yearsName="years_at_address" monthsName="months_at_address"
-          label="Time at this address" />
+        <TimeInputs form={form} p={p} slot="lived" yearsName="years_at_address" monthsName="months_at_address"
+          label="How long have you lived here?" />
       </div>
       {needPrev && (
         <>
           <p className="text-xs text-text-muted sm:col-span-6">
-            Less than 2 years at this address — lenders need the previous one too.
+            Less than 2 years here — lenders need your previous address too.
           </p>
-          <div className="sm:col-span-4">
-            <label htmlFor={`ca-${p}prev-addr`} className={labelClass}>Previous address *</label>
-            <input id={`ca-${p}prev-addr`} placeholder="Street, city, state, ZIP" className={inputClass}
-              {...register(key(p, "prev_address"), { required: "Previous address is required" })} />
+          {/* Own autofill section, so picking a saved address here fills these
+              four boxes instead of the current address above. */}
+          <div className="sm:col-span-6">
+            <label htmlFor={`ca-${p}prev-street`} className={labelClass}>Previous street address *</label>
+            <input id={`ca-${p}prev-street`} autoComplete={`section-${p}prev street-address`} className={inputClass}
+              {...register(key(p, "prev_address"), { required: "Previous street address is required" })} />
             {e("prev_address") && <p className={errClass}>{e("prev_address")}</p>}
           </div>
+          <div className="sm:col-span-3">
+            <label htmlFor={`ca-${p}prev-city`} className={labelClass}>Previous city *</label>
+            <input id={`ca-${p}prev-city`} autoComplete={`section-${p}prev address-level2`} className={inputClass}
+              {...register(key(p, "prev_city"), { required: "Previous city is required" })} />
+            {e("prev_city") && <p className={errClass}>{e("prev_city")}</p>}
+          </div>
+          <div className="sm:col-span-1">
+            <label htmlFor={`ca-${p}prev-state`} className={labelClass}>State *</label>
+            <StateSelect form={form} k={key(p, "prev_state")} id={`ca-${p}prev-state`}
+              autoComplete={`section-${p}prev address-level1`} message="State" />
+            {e("prev_state") && <p className={errClass}>{e("prev_state")}</p>}
+          </div>
           <div className="sm:col-span-2">
-            <TimeInputs form={form} p={p} yearsName="prev_years_at_address" monthsName="prev_months_at_address"
-              label="Time at previous address" />
+            <label htmlFor={`ca-${p}prev-zip`} className={labelClass}>Previous ZIP *</label>
+            <input id={`ca-${p}prev-zip`} inputMode="numeric" autoComplete={`section-${p}prev postal-code`}
+              maxLength={10} className={inputClass}
+              {...register(key(p, "prev_zip"), {
+                required: "Previous ZIP is required",
+                pattern: ZIP,
+              })} />
+            {e("prev_zip") && <p className={errClass}>{e("prev_zip")}</p>}
+          </div>
+          <div className="sm:col-span-3">
+            <TimeInputs form={form} p={p} slot="prev-lived" yearsName="prev_years_at_address"
+              monthsName="prev_months_at_address" label="How long did you live there?" />
           </div>
         </>
       )}
@@ -297,12 +368,12 @@ function EmploymentFields({
             <input id={`ca-${p}work-phone`} type="tel" autoComplete="off" className={inputClass}
               {...register(key(p, "work_phone"), {
                 required: "Work phone is required",
-                validate: (v) => String(v ?? "").replace(/D/g, "").length >= 10 || "Enter a full 10-digit work phone",
+                validate: (v) => String(v ?? "").replace(/\D/g, "").length >= 10 || "Enter a full 10-digit work phone",
               })} />
             {e("work_phone") && <p className={errClass}>{e("work_phone")}</p>}
           </div>
           <div className="sm:col-span-3">
-            <TimeInputs form={form} p={p} yearsName="years_employed" monthsName="months_employed"
+            <TimeInputs form={form} p={p} slot="job" yearsName="years_employed" monthsName="months_employed"
               label="Time on this job" />
           </div>
           {needPrev && (
@@ -326,7 +397,7 @@ function EmploymentFields({
                     {e("prev_employer_name") && <p className={errClass}>{e("prev_employer_name")}</p>}
                   </div>
                   <div className="sm:col-span-3">
-                    <TimeInputs form={form} p={p} yearsName="prev_years_employed" monthsName="prev_months_employed"
+                    <TimeInputs form={form} p={p} slot="prev-job" yearsName="prev_years_employed" monthsName="prev_months_employed"
                       label="Time at previous employer" />
                   </div>
                 </>
@@ -388,10 +459,9 @@ export default function CreditApplicationForm({
   const coSameAddress = watch("co_same_address");
 
   const onSubmit = async (values: FormValues) => {
-    if (values._hp) {
-      setStatus("success"); // honeypot
-      return;
-    }
+    // No client-side honeypot short-circuit: a browser's autofill or password
+    // manager filling the hidden box used to show the customer "received"
+    // while nothing was sent. The server decides, and still keeps the app.
     setStatus("submitting");
     setErrorMessage(null);
     try {
@@ -411,7 +481,9 @@ export default function CreditApplicationForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const data = await res.json();
+      // A gateway timeout comes back as an HTML page, not JSON.
+      const data = await res.json().catch(() => null);
+      if (!data) throw new Error("submit failed");
       if (!res.ok || !data.success) {
         const firstFieldError = data?.details
           ? (Object.values(data.details)[0] as string[] | undefined)?.[0]
@@ -431,7 +503,8 @@ export default function CreditApplicationForm({
   const onInvalid = (fieldErrors: typeof errors) => {
     const first = Object.keys(fieldErrors)[0];
     if (!first) return;
-    const el = document.querySelector<HTMLElement>(`[name="${first}"]`);
+    // Years/months boxes carry their form key in data-field, not name.
+    const el = document.querySelector<HTMLElement>(`[name="${first}"], [data-field="${first}"]`);
     el?.scrollIntoView({ behavior: "smooth", block: "center" });
     el?.focus({ preventScroll: true });
   };
@@ -727,7 +800,7 @@ export default function CreditApplicationForm({
             <input id="ca-down" inputMode="numeric" placeholder="$ (type 0 if none)" className={inputClass}
               {...register("requested_down_payment", {
                 required: "Enter your down payment — type 0 if you have none",
-                pattern: { value: /\d/, message: "Enter a dollar amount (0 if none)" },
+                pattern: DOLLARS,
               })} />
             {errors.requested_down_payment && <p className={errClass}>{errors.requested_down_payment.message}</p>}
           </div>
@@ -763,9 +836,11 @@ export default function CreditApplicationForm({
         </div>
       </SectionCard>
 
-      {/* Honeypot — name is intentionally obscure so Chrome autofill ignores it */}
-      <input type="text" tabIndex={-1} autoComplete="off" aria-hidden="true"
-        className="absolute left-[-9999px] h-0 w-0 opacity-0" {...register("_hp")} />
+      {/* Honeypot. display:none (not just off-screen) — browsers never autofill
+          a field that isn't rendered, but form-stuffing bots still find it. */}
+      <div hidden aria-hidden="true">
+        <input type="text" tabIndex={-1} autoComplete="off" {...register("_hp")} />
+      </div>
 
       {status === "error" && (
         <p className="rounded-md border border-accent/40 bg-accent/5 px-4 py-3 text-sm text-accent">

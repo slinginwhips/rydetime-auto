@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
@@ -46,6 +47,9 @@ const creditAppSchema = z.object({
   months_at_address: digits.optional().or(z.literal("")),
   monthly_housing_payment: z.string().trim().max(40).optional(),
   prev_address: z.string().trim().max(200).optional(),
+  prev_city: z.string().trim().max(100).optional(),
+  prev_state: z.string().trim().max(40).optional(),
+  prev_zip: z.string().trim().max(15).optional(),
   prev_years_at_address: digits.optional().or(z.literal("")),
   prev_months_at_address: digits.optional().or(z.literal("")),
 
@@ -86,6 +90,9 @@ const creditAppSchema = z.object({
   co_years_at_address: digits.optional().or(z.literal("")),
   co_months_at_address: digits.optional().or(z.literal("")),
   co_prev_address: z.string().trim().max(200).optional(),
+  co_prev_city: z.string().trim().max(100).optional(),
+  co_prev_state: z.string().trim().max(40).optional(),
+  co_prev_zip: z.string().trim().max(15).optional(),
   co_prev_years_at_address: digits.optional().or(z.literal("")),
   co_prev_months_at_address: digits.optional().or(z.literal("")),
   co_employment_status: z
@@ -141,15 +148,24 @@ const creditAppSchema = z.object({
         need("prev_years_employed", v.prev_years_employed, "Time at previous employer is required");
       }
     }
-    if (months(v.years_at_address, v.months_at_address) < 24) {
-      need("prev_address", v.prev_address, "Previous address is required");
-      need("prev_years_at_address", v.prev_years_at_address, "Time at previous address is required");
-    }
-    const phoneOk = (s?: string) => (s ?? "").replace(/D/g, "").length >= 10;
+    // Previous address: street, city, state and ZIP each required — a lender
+    // can't use "the old place on Main".
+    const prevAddress = (p: "" | "co_", who: string) => {
+      const r = v as Record<string, unknown>;
+      const s = (name: string) => r[`${p}${name}`] as string | undefined;
+      const msg = (text: string) => (who ? `${who} ${text}` : text[0].toUpperCase() + text.slice(1));
+      need(`${p}prev_address`, s("prev_address"), msg("previous street address is required"));
+      need(`${p}prev_city`, s("prev_city"), msg("previous city is required"));
+      need(`${p}prev_state`, s("prev_state"), msg("previous state is required"));
+      need(`${p}prev_zip`, s("prev_zip"), msg("previous ZIP is required"));
+      need(`${p}prev_years_at_address`, s("prev_years_at_address"), msg("time at previous address is required"));
+    };
+    if (months(v.years_at_address, v.months_at_address) < 24) prevAddress("", "");
+    const phoneOk = (s?: string) => (s ?? "").replace(/\D/g, "").length >= 10;
     const rent = (path: string, value: string | undefined, status: string | undefined) => {
       if (status === "other") return;
       need(path, value, "Monthly rent/mortgage is required — enter 0 if none");
-      if (value && value.trim() && !/d/.test(value)) {
+      if (value && value.trim() && !/\d/.test(value)) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message: "Enter a dollar amount (0 if none)" });
       }
     };
@@ -181,10 +197,7 @@ const creditAppSchema = z.object({
       if (v.co_employment_status !== "retired" && !phoneOk(v.co_work_phone)) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["co_work_phone"], message: "Co-applicant work phone is required (10 digits)" });
       }
-      if (months(v.co_years_at_address, v.co_months_at_address) < 24) {
-        need("co_prev_address", v.co_prev_address, "Co-applicant previous address is required");
-        need("co_prev_years_at_address", v.co_prev_years_at_address, "Co-applicant time at previous address is required");
-      }
+      if (months(v.co_years_at_address, v.co_months_at_address) < 24) prevAddress("co_", "Co-applicant");
       need(
         "co_gross_monthly_income",
         v.co_gross_monthly_income,
@@ -220,6 +233,39 @@ const dateOrNull = (s: string | undefined): string | null => {
   return Number.isNaN(d.getTime()) ? null : s.trim();
 };
 
+/**
+ * Insert the website's copy of the application. If the database is missing a
+ * column the code knows about (a migration in supabase/credit_applications.sql
+ * not run yet), drop that column and retry rather than losing the whole row —
+ * the DMS push still carries every field. Returns the columns dropped.
+ */
+async function insertCreditAppRow(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  row: Record<string, unknown>
+): Promise<{ ok: true; dropped: string[] } | { ok: false; error: string }> {
+  const payload = { ...row };
+  const dropped: string[] = [];
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const { error } = await supabase.from("credit_applications").insert(payload);
+    if (!error) return { ok: true, dropped };
+    // PostgREST: "Could not find the 'prev_city' column of 'credit_applications'…"
+    // Postgres:  'column "prev_city" of relation … does not exist'
+    const missing =
+      /'([a-z0-9_]+)' column/i.exec(error.message)?.[1] ??
+      /column "([a-z0-9_]+)"/i.exec(error.message)?.[1];
+    if (!missing || !(missing in payload) || missing === "id" || missing === "lead_id") {
+      return { ok: false, error: error.message };
+    }
+    delete payload[missing];
+    dropped.push(missing);
+  }
+  return { ok: false, error: "too many missing columns" };
+}
+
+// Room for the DB writes, the DMS push and DealerCenter (each has its own
+// timeout) — the platform default could cut a submission off midway.
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const json = await req.json().catch(() => null);
@@ -236,14 +282,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
     const app = parsed.data as CreditApplicationSubmission;
 
-    // Honeypot tripped: pretend success, save nothing, notify no one.
-    if (app._hp && app._hp.trim() !== "") {
-      return NextResponse.json({ success: true, lead_id: null });
-    }
+    // Honeypot. It used to drop the application while telling the customer it
+    // was received — and a browser autofilling the hidden box looks exactly
+    // like a bot. Anything that got past the full validation above (9-digit
+    // SSN, DOB, signature, consent) is kept and just flagged.
+    const honeypotTripped = Boolean(app._hp && app._hp.trim() !== "");
 
     // Resolve vehicle for DealerCenter enrichment.
     let vehicle: Vehicle | null = null;
-    if (app.vehicle_id) vehicle = await getVehicleById(app.vehicle_id);
+    if (app.vehicle_id) vehicle = await getVehicleById(app.vehicle_id).catch(() => null);
 
     const ctx: CreditAppAdfContext = {
       year: vehicle?.year,
@@ -253,89 +300,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       stock_number: vehicle?.stock_number ?? app.stock_number,
     };
 
-    // Build the FULL application (with SSN) and push it to DealerCenter. This is
-    // the only place the raw SSN travels — in flight, to DealerCenter's CRM.
-    const adfXml = buildCreditAppAdfXml(app, ctx);
-    const dcResult = await pushAdfToDealerCenter(adfXml, {
-      lead_type: "credit_app",
-      label: `New SIGNED CREDIT APP: ${app.first_name} ${app.last_name}`,
-      noFallbackNotify: true, // never echo a full SSN into a human inbox
-    });
-
     const applicantSsn4 = last4(app.ssn);
+    const co = app.has_co_applicant === true;
+    const submittedAt = new Date().toISOString();
+    // Chosen here, not by the database, so the DMS push carries the same id
+    // the DMS poller will see — even if the website insert below fails.
+    const appId = randomUUID();
 
-    // Human alert to the dealership — REDACTED (last 4 only, never full SSN).
-    const notify = () =>
-      sendNotification({
-        subject: `Signed credit app: ${app.first_name} ${app.last_name}${
-          dcResult.success ? "" : " (⚠ DealerCenter push FAILED — call customer)"
-        }`,
-        body: [
-          `A signed online credit application just came in.`,
-          ``,
-          `Name: ${app.first_name} ${app.last_name}`,
-          `Phone: ${app.phone}`,
-          app.email ? `Email: ${app.email}` : null,
-          applicantSsn4 ? `SSN: ***-**-${applicantSsn4}` : null,
-          ctx.year || ctx.make || ctx.model
-            ? `Vehicle: ${[ctx.year, ctx.make, ctx.model].filter(Boolean).join(" ")}`
-            : null,
-          app.requested_down_payment ? `Down payment: ${app.requested_down_payment}` : null,
-          app.gross_monthly_income ? `Gross monthly income: ${app.gross_monthly_income}` : null,
-          `Signed by: ${app.signature_name}`,
-          ``,
-          dcResult.success
-            ? `➡ Full application (with SSN) was delivered to DealerCenter (${dcResult.method}). Open DealerCenter to run it.`
-            : `⚠ The full application did NOT reach DealerCenter (${dcResult.error}). The SSN is not stored anywhere — call the customer to re-collect it or have them resubmit.`,
-        ]
-          .filter(Boolean)
-          .join("\n"),
-      });
-
-    // Dev mode / no database: still deliver to DealerCenter + alert.
-    if (!isSupabaseConfigured() || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      await notify();
-      return NextResponse.json({ success: true, lead_id: null, dc_pushed: dcResult.success });
-    }
-
-    const supabase = getSupabaseAdmin();
-
-    // 1) Lead row (reuses the existing pipeline / admin views).
-    const { data: lead, error: insertErr } = await supabase
-      .from("leads")
-      .insert({
-        first_name: app.first_name,
-        last_name: app.last_name,
-        email: app.email || null,
-        phone: app.phone,
-        vehicle_id: vehicle?.id ?? null,
-        vin: ctx.vin ?? null,
-        stock_number: ctx.stock_number ?? null,
-        message: "Signed online credit application submitted.",
-        lead_type: "credit_app",
-        down_payment: app.requested_down_payment ?? null,
-        monthly_payment_goal: app.desired_monthly_payment ?? null,
-        source_url: app.source_url ?? null,
-        dc_pushed: dcResult.success,
-        dc_pushed_at: dcResult.success ? new Date().toISOString() : null,
-      })
-      .select("id")
-      .single();
-    if (insertErr || !lead) throw insertErr ?? new Error("Lead insert returned no row");
-    const leadId = (lead as { id: string }).id;
-
-    await supabase.from("lead_events").insert({ lead_id: leadId, event_type: "created", notes: "credit_app" });
-    await supabase.from("lead_events").insert({
-      lead_id: leadId,
-      event_type: dcResult.success ? "dc_pushed" : "dc_push_failed",
-      notes: dcResult.success
-        ? `method=${dcResult.method}${dcResult.dc_lead_id ? ` dc_lead_id=${dcResult.dc_lead_id}` : ""}`
-        : dcResult.error ?? "unknown error",
-    });
-
-    // 2) Redacted credit-application record (NO full SSN — last 4 only).
+    // Redacted credit-application record (NO full SSN — last 4 only).
     const creditAppRow = {
-      lead_id: leadId,
       first_name: app.first_name,
       middle_name: app.middle_name ?? null,
       last_name: app.last_name,
@@ -352,7 +325,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       years_at_address: numOrNull(app.years_at_address),
       months_at_address: numOrNull(app.months_at_address),
       monthly_housing_payment: app.monthly_housing_payment ?? null,
-      prev_address: app.prev_address ?? null,
+      prev_address: app.prev_address || null,
       employment_status: app.employment_status ?? null,
       employer_name: app.employer_name ?? null,
       job_title: app.job_title ?? null,
@@ -362,15 +335,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       gross_monthly_income: app.gross_monthly_income ?? null,
       other_income: app.other_income ?? null,
       other_income_source: app.other_income_source ?? null,
-      co_first_name: app.has_co_applicant ? app.co_first_name ?? null : null,
-      co_last_name: app.has_co_applicant ? app.co_last_name ?? null : null,
-      co_dob: app.has_co_applicant ? dateOrNull(app.co_dob) : null,
-      co_ssn_last4: app.has_co_applicant ? last4(app.co_ssn) : null,
-      co_email: app.has_co_applicant ? app.co_email || null : null,
-      co_phone: app.has_co_applicant ? app.co_phone ?? null : null,
-      co_employer_name: app.has_co_applicant ? app.co_employer_name ?? null : null,
-      co_gross_monthly_income: app.has_co_applicant ? app.co_gross_monthly_income ?? null : null,
-      co_relationship: app.has_co_applicant ? app.co_relationship ?? null : null,
+      co_first_name: co ? app.co_first_name ?? null : null,
+      co_last_name: co ? app.co_last_name ?? null : null,
+      co_dob: co ? dateOrNull(app.co_dob) : null,
+      co_ssn_last4: co ? last4(app.co_ssn) : null,
+      co_email: co ? app.co_email || null : null,
+      co_phone: co ? app.co_phone ?? null : null,
+      co_employer_name: co ? app.co_employer_name ?? null : null,
+      co_gross_monthly_income: co ? app.co_gross_monthly_income ?? null : null,
+      co_relationship: co ? app.co_relationship ?? null : null,
       vehicle_id: vehicle?.id ?? null,
       vin: ctx.vin ?? null,
       stock_number: ctx.stock_number ?? null,
@@ -384,13 +357,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         req.headers.get("x-real-ip") ||
         null,
       signer_user_agent: req.headers.get("user-agent")?.slice(0, 400) ?? null,
-      dc_pushed: dcResult.success,
-      dc_pushed_at: dcResult.success ? new Date().toISOString() : null,
     };
 
     // Previous address/employer + the co-applicant's own address & job.
-    const co = app.has_co_applicant === true;
     const detailRow = {
+      prev_city: app.prev_city || null,
+      prev_state: app.prev_state || null,
+      prev_zip: app.prev_zip || null,
       prev_years_at_address: numOrNull(app.prev_years_at_address),
       prev_months_at_address: numOrNull(app.prev_months_at_address),
       prev_employer_name: app.prev_employer_name || null,
@@ -406,6 +379,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       co_years_at_address: co ? numOrNull(app.co_years_at_address) : null,
       co_months_at_address: co ? numOrNull(app.co_months_at_address) : null,
       co_prev_address: co ? app.co_prev_address || null : null,
+      co_prev_city: co ? app.co_prev_city || null : null,
+      co_prev_state: co ? app.co_prev_state || null : null,
+      co_prev_zip: co ? app.co_prev_zip || null : null,
       co_prev_years_at_address: co ? numOrNull(app.co_prev_years_at_address) : null,
       co_prev_months_at_address: co ? numOrNull(app.co_prev_months_at_address) : null,
       co_employment_status: co ? app.co_employment_status ?? null : null,
@@ -424,40 +400,148 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     const fullRow = { ...creditAppRow, ...detailRow };
 
-    const { data: creditApp, error: caErr } = await supabase
-      .from("credit_applications")
-      .insert(fullRow)
-      .select("id, created_at, signed_at")
-      .single();
-    if (caErr) {
-      // The lead + DC push already succeeded; surface the audit-row failure but
-      // don't fail the customer's submission.
-      console.error("[api/credit-application] credit_applications insert failed:", caErr.message);
-    }
+    // 1) Save it here first. This used to come AFTER the DealerCenter push, so
+    //    a slow or failing DealerCenter could cost the whole submission.
+    const supabase =
+      isSupabaseConfigured() && process.env.SUPABASE_SERVICE_ROLE_KEY ? getSupabaseAdmin() : null;
+    let leadId: string | null = null;
+    let storedHere = false;
+    const problems: string[] = [];
 
-    // 3) Hand the FULL application (SSN included) to the DMS, so Dealertrack's
-    //    9-digit SSN box stops being typed by hand. The row we send is the one
-    //    we just stored plus the social — same shape, same id, so the DMS's own
-    //    poller can't file a second copy of it. Nothing extra is stored here.
-    //    Best-effort: a failure leaves the poller to file it without the SSN.
-    if (creditApp) {
-      const identifiers = creditApp as { id: string; created_at: string; signed_at: string | null };
-      const dmsResult = await pushCreditAppToDms({
-        ...fullRow,
-        id: identifiers.id,
-        created_at: identifiers.created_at,
-        signed_at: identifiers.signed_at,
-        ssn: app.ssn || null,
-        co_ssn: app.has_co_applicant ? app.co_ssn || null : null,
-      });
-      if (dmsResult.status === "failed") {
-        console.error("[api/credit-application] DMS push failed:", dmsResult.error);
+    if (supabase) {
+      const { data: lead, error: insertErr } = await supabase
+        .from("leads")
+        .insert({
+          first_name: app.first_name,
+          last_name: app.last_name,
+          email: app.email || null,
+          phone: app.phone,
+          vehicle_id: vehicle?.id ?? null,
+          vin: ctx.vin ?? null,
+          stock_number: ctx.stock_number ?? null,
+          message: honeypotTripped
+            ? "Signed online credit application submitted. (Hidden spam-trap field was filled — likely browser autofill; verify the customer.)"
+            : "Signed online credit application submitted.",
+          lead_type: "credit_app",
+          down_payment: app.requested_down_payment ?? null,
+          monthly_payment_goal: app.desired_monthly_payment ?? null,
+          source_url: app.source_url ?? null,
+        })
+        .select("id")
+        .single();
+      if (insertErr || !lead) {
+        problems.push(`website lead insert failed: ${insertErr?.message ?? "no row"}`);
+      } else {
+        leadId = (lead as { id: string }).id;
+        await supabase.from("lead_events").insert({ lead_id: leadId, event_type: "created", notes: "credit_app" });
+
+        const stored = await insertCreditAppRow(supabase, { id: appId, lead_id: leadId, ...fullRow });
+        if (stored.ok) {
+          storedHere = true;
+          if (stored.dropped.length) {
+            problems.push(
+              `website DB is missing column(s) ${stored.dropped.join(", ")} — run supabase/credit_applications.sql (the DMS still got them)`
+            );
+          }
+        } else {
+          problems.push(`credit_applications insert failed: ${stored.error}`);
+        }
       }
     }
 
-    await notify();
+    // 2) The FULL application (SSN included) to the DMS, and the ADF copy to
+    //    DealerCenter, side by side. The DMS gets it even when the website
+    //    insert above failed — same id, so its poller can never file it twice.
+    const adfXml = buildCreditAppAdfXml(app, ctx);
+    const [dmsResult, dcResult] = await Promise.all([
+      pushCreditAppToDms({
+        ...fullRow,
+        id: appId,
+        lead_id: leadId,
+        created_at: submittedAt,
+        signed_at: submittedAt,
+        ssn: app.ssn || null,
+        co_ssn: co ? app.co_ssn || null : null,
+      }),
+      pushAdfToDealerCenter(adfXml, {
+        lead_type: "credit_app",
+        label: `New SIGNED CREDIT APP: ${app.first_name} ${app.last_name}`,
+        noFallbackNotify: true, // never echo a full SSN into a human inbox
+      }),
+    ]);
+    if (dmsResult.status === "failed") {
+      problems.push(
+        storedHere
+          ? `DMS push failed (${dmsResult.error}) — the DMS poller will still file it, without the full SSN`
+          : `DMS push failed (${dmsResult.error})`
+      );
+    }
 
-    return NextResponse.json({ success: true, lead_id: leadId, dc_pushed: dcResult.success });
+    if (supabase && leadId) {
+      const pushedAt = dcResult.success ? new Date().toISOString() : null;
+      await supabase.from("leads").update({ dc_pushed: dcResult.success, dc_pushed_at: pushedAt }).eq("id", leadId);
+      if (storedHere) {
+        await supabase
+          .from("credit_applications")
+          .update({ dc_pushed: dcResult.success, dc_pushed_at: pushedAt })
+          .eq("id", appId);
+      }
+      await supabase.from("lead_events").insert({
+        lead_id: leadId,
+        event_type: dcResult.success ? "dc_pushed" : "dc_push_failed",
+        notes: dcResult.success
+          ? `method=${dcResult.method}${dcResult.dc_lead_id ? ` dc_lead_id=${dcResult.dc_lead_id}` : ""}`
+          : dcResult.error ?? "unknown error",
+      });
+    }
+
+    const inDms = dmsResult.status === "ok";
+    // Somewhere a human will find it. If none of these happened the customer
+    // is told to call — never shown a false "received".
+    const delivered = storedHere || inDms || dcResult.success;
+    for (const p of problems) console.error("[api/credit-application]", p);
+
+    // Human alert to the dealership — REDACTED (last 4 only, never full SSN).
+    await sendNotification({
+      subject: `Signed credit app: ${app.first_name} ${app.last_name}${
+        inDms ? "" : " (⚠ NOT in the DMS yet — check it)"
+      }${honeypotTripped ? " (spam-trap field filled — verify)" : ""}`,
+      body: [
+        `A signed online credit application just came in.`,
+        ``,
+        `Name: ${app.first_name} ${app.last_name}`,
+        `Phone: ${app.phone}`,
+        app.email ? `Email: ${app.email}` : null,
+        applicantSsn4 ? `SSN: ***-**-${applicantSsn4}` : null,
+        co ? `Co-applicant: ${`${app.co_first_name ?? ""} ${app.co_last_name ?? ""}`.trim()}` : null,
+        ctx.year || ctx.make || ctx.model
+          ? `Vehicle: ${[ctx.year, ctx.make, ctx.model].filter(Boolean).join(" ")}`
+          : null,
+        app.requested_down_payment ? `Down payment: ${app.requested_down_payment}` : null,
+        app.gross_monthly_income ? `Gross monthly income: ${app.gross_monthly_income}` : null,
+        `Signed by: ${app.signature_name}`,
+        ``,
+        inDms
+          ? `➡ Full application (with SSN) is in the DMS under Credit apps.`
+          : `⚠ The full application did NOT reach the DMS directly.${
+              storedHere ? " The DMS poller should file it within a few minutes (without the full SSN)." : ""
+            }`,
+        dcResult.success
+          ? `➡ Also delivered to DealerCenter (${dcResult.method}).`
+          : `DealerCenter: not delivered (${dcResult.error}).`,
+        ...(problems.length ? [``, `Problems:`, ...problems.map((p) => `- ${p}`)] : []),
+      ]
+        .filter((l) => l !== null)
+        .join("\n"),
+    }).catch(() => undefined);
+
+    if (!delivered) {
+      return NextResponse.json(
+        { error: "We couldn't save your application." },
+        { status: 500 }
+      );
+    }
+    return NextResponse.json({ success: true, lead_id: leadId, dc_pushed: inDms || dcResult.success });
   } catch (err) {
     // Deliberately do NOT log the request body — it contains an SSN.
     console.error(

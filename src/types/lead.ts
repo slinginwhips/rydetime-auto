@@ -257,7 +257,12 @@ export interface CreditApplicationSubmission {
   years_at_address?: string;
   months_at_address?: string;
   monthly_housing_payment?: string;
+  // Previous address as street/city/state/ZIP — required when under 2 years
+  // at the current one.
   prev_address?: string;
+  prev_city?: string;
+  prev_state?: string;
+  prev_zip?: string;
   prev_years_at_address?: string;
   prev_months_at_address?: string;
 
@@ -302,6 +307,9 @@ export interface CreditApplicationSubmission {
   co_years_at_address?: string;
   co_months_at_address?: string;
   co_prev_address?: string;
+  co_prev_city?: string;
+  co_prev_state?: string;
+  co_prev_zip?: string;
   co_prev_years_at_address?: string;
   co_prev_months_at_address?: string;
   co_employment_status?: EmploymentStatus;
@@ -355,6 +363,9 @@ export interface CreditApplication {
   months_at_address: number | null;
   monthly_housing_payment: string | null;
   prev_address: string | null;
+  prev_city: string | null;
+  prev_state: string | null;
+  prev_zip: string | null;
   prev_years_at_address: number | null;
   prev_months_at_address: number | null;
   employment_status: string | null;
@@ -389,6 +400,9 @@ export interface CreditApplication {
   co_years_at_address: number | null;
   co_months_at_address: number | null;
   co_prev_address: string | null;
+  co_prev_city: string | null;
+  co_prev_state: string | null;
+  co_prev_zip: string | null;
   co_prev_years_at_address: number | null;
   co_prev_months_at_address: number | null;
   co_employment_status: string | null;

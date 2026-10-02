@@ -78,6 +78,8 @@ export async function pushAdfToDealerCenter(
         method: "POST",
         headers: { "Content-Type": "application/xml", access_token: token },
         body: adfXml,
+        // A hung DealerCenter must not hold a credit-app submission open.
+        signal: AbortSignal.timeout(10_000),
       });
       if (res.ok) {
         const body = await res.text();
@@ -193,7 +195,7 @@ export function buildCreditAppAdfXml(
     line("Housing", app.housing_status),
     line("Time at address", timeText(app.years_at_address, app.months_at_address)),
     line("Monthly housing payment", app.monthly_housing_payment),
-    line("Previous address", app.prev_address),
+    line("Previous address", [app.prev_address, app.prev_city, app.prev_state, app.prev_zip].filter(Boolean).join(", ")),
     line("Time at previous address", timeText(app.prev_years_at_address, app.prev_months_at_address)),
     "",
     "EMPLOYMENT & INCOME",
@@ -226,7 +228,7 @@ export function buildCreditAppAdfXml(
           line("Housing", app.co_housing_status),
           line("Time at address", timeText(app.co_years_at_address, app.co_months_at_address)),
           line("Monthly housing payment", app.co_monthly_housing_payment),
-          line("Previous address", app.co_prev_address),
+          line("Previous address", [app.co_prev_address, app.co_prev_city, app.co_prev_state, app.co_prev_zip].filter(Boolean).join(", ")),
           line("Time at previous address", timeText(app.co_prev_years_at_address, app.co_prev_months_at_address)),
           " ",
           "CO-APPLICANT EMPLOYMENT & INCOME",
