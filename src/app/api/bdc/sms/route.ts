@@ -23,7 +23,12 @@ import {
   getBdcLead,
   getThread,
   getBdcStatus,
+  findLatestNeedsHumanLead,
 } from "@/lib/bdc/store";
+import { alertPhones } from "@/lib/bdc/escalate";
+import { pushLeadToDealerCenter } from "@/lib/bdc/pushToDealerCenter";
+import { sendSmsTo } from "@/lib/notificationProvider";
+import { DEALERSHIP } from "@/lib/dealership";
 import { draftFollowUp } from "@/lib/bdc/replyEngine";
 import { dispatchReply } from "@/lib/bdc/dispatch";
 import { applyDraftTags } from "@/lib/bdc/applyDraftTags";
@@ -64,6 +69,55 @@ function reconstructUrl(req: NextRequest): string {
   return `${proto}://${host}${new URL(req.url).pathname}`;
 }
 
+function last10(phone: string): string {
+  return phone.replace(/\D/g, "").slice(-10);
+}
+
+function isStaffPhone(from: string): boolean {
+  const f = last10(from);
+  return f.length === 10 && alertPhones().some((p) => last10(p) === f);
+}
+
+/**
+ * Relay a staff answer to the customer who is waiting on it (the most recent
+ * lead still flagged needs_human), then text staff back who it went to.
+ */
+async function handleStaffReply(from: string, body: string): Promise<void> {
+  if (!body) return;
+  const leadId = await findLatestNeedsHumanLead();
+  if (!leadId) {
+    await sendSmsTo(from, "BDC: no customer is waiting on an answer right now, so I didn't send that anywhere.").catch(() => null);
+    return;
+  }
+  const ctx = await getBdcLead(leadId);
+  const who = ctx ? [ctx.first_name, ctx.last_name].filter(Boolean).join(" ") || ctx.reply_target || "the customer" : "the customer";
+  await addEvent(leadId, "staff_answered", body);
+  if (!ctx || ctx.opted_out || !isAIConfigured()) {
+    await sendSmsTo(from, `BDC: couldn't auto-relay to ${who}. Answer them from ${DEALERSHIP.siteUrl}/admin/leads/${leadId}`).catch(() => null);
+    return;
+  }
+  const history = await getThread(leadId);
+  const draft = await draftFollowUp(ctx, history, body);
+  const result = await dispatchReply(draft);
+  await logMessage({
+    lead_id: leadId,
+    direction: "outbound",
+    channel: draft.channel,
+    body: draft.body,
+    sent: result.ok,
+    skip_reason: result.skipped ?? null,
+    provider_sid: result.providerSid ?? null,
+  });
+  await setBdcStatus(leadId, "replied");
+  await addEvent(leadId, result.ok ? "bdc_relayed_staff_answer" : "bdc_reply_drafted", result.ok ? `channel=${draft.channel}` : `not sent: ${result.skipped}`);
+  await sendSmsTo(
+    from,
+    result.ok
+      ? `BDC: sent to ${who}: "${draft.body.slice(0, 200)}"`
+      : `BDC: drafted for ${who} but not sent (${result.skipped}). ${DEALERSHIP.siteUrl}/admin/leads/${leadId}`
+  ).catch(() => null);
+}
+
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const form = await req.formData();
@@ -77,6 +131,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const from = (params.From || "").trim();
     const body = (params.Body || "").trim();
     const numMedia = parseInt(params.NumMedia || "0", 10) || 0;
+
+    // Staff (Ryan/Dawn) texting back an answer to a BDC alert. Their number may
+    // also sit on an old test lead, so this must run before the lead lookup or
+    // the bot would treat them like that customer.
+    if (from && isStaffPhone(from)) {
+      await handleStaffReply(from, body);
+      return twiml();
+    }
 
     const matched = from ? await findLeadByContact(from) : null;
 
@@ -99,6 +161,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       if (!createdId) return twiml();
       lead = { id: createdId, opted_out: false };
       await addEvent(createdId, "bdc_lead_created", "inbound text from an unknown number");
+      await pushLeadToDealerCenter(createdId);
     }
 
     // 2. Thread the inbound message.

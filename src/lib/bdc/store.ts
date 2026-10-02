@@ -217,6 +217,30 @@ export async function setBdcStatus(lead_id: string, status: string): Promise<voi
   await getSupabaseAdmin().from("leads").update({ bdc_status: status }).eq("id", lead_id);
 }
 
+/**
+ * The lead most recently escalated to staff that is still waiting on an
+ * answer. Used when Ryan/Dawn text back an answer to a BDC alert.
+ */
+export async function findLatestNeedsHumanLead(): Promise<string | null> {
+  if (!hasDb()) return null;
+  const supabase = getSupabaseAdmin();
+  const { data: events } = await supabase
+    .from("lead_events")
+    .select("lead_id")
+    .eq("event_type", "bdc_needs_human")
+    .order("created_at", { ascending: false })
+    .limit(25);
+  const ids = [...new Set(((events ?? []) as { lead_id: string }[]).map((e) => e.lead_id))];
+  if (ids.length === 0) return null;
+  const { data: waiting } = await supabase
+    .from("leads")
+    .select("id")
+    .in("id", ids)
+    .eq("bdc_status", "needs_human");
+  const open = new Set(((waiting ?? []) as { id: string }[]).map((l) => l.id));
+  return ids.find((id) => open.has(id)) ?? null;
+}
+
 /** Mark a lead opted-out (STOP). Idempotent. */
 export async function setOptedOut(lead_id: string): Promise<void> {
   if (!hasDb()) return;

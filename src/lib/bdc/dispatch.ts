@@ -30,6 +30,8 @@ export async function dispatchReply(
   // `force` = a human clicked Send in the admin console; that bypasses the
   // AUTO-send master switch (which only governs the bot sending on its own).
   if (!opts.force && !isBdcArmed()) return { ok: false, skipped: "bdc-disarmed" };
+  // Failed the no-pitch check twice: a human answers this one.
+  if (!opts.force && draft.held) return { ok: false, skipped: "held-sales-talk" };
 
   switch (draft.channel) {
     case "sms": {

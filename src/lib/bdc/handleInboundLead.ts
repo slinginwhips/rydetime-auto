@@ -12,6 +12,7 @@ import { draftFirstTouch } from "./replyEngine";
 import { dispatchReply } from "./dispatch";
 import { applyDraftTags } from "./applyDraftTags";
 import { findOrCreateLead, logMessage, addEvent, setBdcStatus, hasDb } from "./store";
+import { pushLeadToDealerCenter } from "./pushToDealerCenter";
 import { sendNotification } from "@/lib/notificationProvider";
 import type { ParsedInboundLead } from "@/types/bdc";
 
@@ -51,6 +52,8 @@ export async function handleInboundLead(
   }
 
   await addEvent(rec.id, "bdc_lead_created", `source=${parsed.source}`);
+  // DealerCenter is still the CRM of record — every new lead goes in there too.
+  if (!opts.dryRun) await pushLeadToDealerCenter(rec.id);
 
   if (rec.opted_out) {
     return { status: "opted_out", lead_id: rec.id, parsed };

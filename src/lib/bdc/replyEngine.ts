@@ -14,6 +14,7 @@ import { matchVehiclesToQuery, formatVehicleKnowledge, retrieveKnowledge } from 
 import { DEALERSHIP } from "@/lib/dealership";
 import { getCarfaxProvider } from "@/lib/carfaxProvider";
 import { hoursContext, isOpenAt, isWithinHours, nextOpenDescription } from "./hours";
+import { salesTalkIssues, rewriteInstruction, HELD_REASON } from "./noPitch";
 import type { Vehicle } from "@/types/vehicle";
 import type { ParsedInboundLead, ReplyChannel } from "@/types/bdc";
 
@@ -33,6 +34,8 @@ export interface DraftedReply {
   /** Parsed from the model's control tags (stripped from the body). */
   appointment?: { date: string; time: string } | null;
   needs_human?: string | null;
+  /** Draft failed the no-pitch check twice; never auto-sent. */
+  held?: boolean;
   /** A name the customer gave while filed as Unknown, from the [[NAME:]] tag. */
   customer_name?: string | null;
 }
@@ -341,6 +344,46 @@ export function applySmsCompliance(body: string, channel: ReplyChannel): string 
  * isn't configured so the caller can fall back to a human alert rather than
  * sending nothing.
  */
+/**
+ * Draft, then enforce the no-pitch rule in code: one rewrite if the draft
+ * talks the car up or down, and hold it (never auto-send) if it still does.
+ */
+async function draftWithoutPitch(
+  system: string,
+  userMessage: string,
+  customerText: string,
+  allowPrice = false
+): Promise<{ raw: string; held: boolean }> {
+  const anthropic = getAnthropic();
+  const textOf = (r: Awaited<ReturnType<typeof anthropic.messages.create>>) =>
+    ("content" in r ? r.content : [])
+      .filter((b): b is Extract<typeof b, { type: "text" }> => b.type === "text")
+      .map((b) => b.text)
+      .join("")
+      .trim();
+
+  const first = textOf(
+    await anthropic.messages.create({ model: AI_MODEL, max_tokens: 500, system, messages: [{ role: "user", content: userMessage }] })
+  );
+  const issues = salesTalkIssues(extractTags(first).body, customerText, allowPrice);
+  if (issues.length === 0) return { raw: first, held: false };
+
+  const second = textOf(
+    await anthropic.messages.create({
+      model: AI_MODEL,
+      max_tokens: 500,
+      system,
+      messages: [
+        { role: "user", content: userMessage },
+        { role: "assistant", content: first },
+        { role: "user", content: rewriteInstruction(issues) },
+      ],
+    })
+  );
+  const stillBad = salesTalkIssues(extractTags(second).body, customerText, allowPrice).length > 0;
+  return { raw: second, held: stillBad };
+}
+
 export async function draftFirstTouch(lead: ParsedInboundLead): Promise<DraftedReply> {
   if (!isAIConfigured()) {
     throw new Error("ANTHROPIC_API_KEY not configured — cannot draft BDC reply.");
@@ -349,19 +392,7 @@ export async function draftFirstTouch(lead: ParsedInboundLead): Promise<DraftedR
   const inventory = await getAllActiveVehicles();
   const plan = planReply(lead, inventory);
 
-  const anthropic = getAnthropic();
-  const response = await anthropic.messages.create({
-    model: AI_MODEL,
-    max_tokens: 500,
-    system: plan.system,
-    messages: [{ role: "user", content: plan.userMessage }],
-  });
-
-  const raw = response.content
-    .filter((b): b is Extract<typeof b, { type: "text" }> => b.type === "text")
-    .map((b) => b.text)
-    .join("")
-    .trim();
+  const { raw, held } = await draftWithoutPitch(plan.system, plan.userMessage, lead.message ?? "");
 
   const { body, tags } = extractTags(raw);
 
@@ -374,8 +405,9 @@ export async function draftFirstTouch(lead: ParsedInboundLead): Promise<DraftedR
     matched_vehicle: plan.matched_vehicle,
     model: AI_MODEL,
     appointment: validAppointment(tags.appointment),
-    needs_human: tags.needsHuman,
+    needs_human: held ? HELD_REASON : tags.needsHuman,
     customer_name: tags.name,
+    held,
   };
 }
 
@@ -448,7 +480,9 @@ Output ONLY the next message to send (plus any tag lines). No preamble, no quote
  */
 export async function draftFollowUp(
   lead: ParsedInboundLead,
-  history: ThreadTurn[]
+  history: ThreadTurn[],
+  /** Ryan/Dawn's answer to an escalated question, to relay to the customer. */
+  staffAnswer?: string
 ): Promise<DraftedReply> {
   if (!isAIConfigured()) {
     throw new Error("ANTHROPIC_API_KEY not configured — cannot draft BDC follow-up.");
@@ -474,21 +508,15 @@ export async function draftFollowUp(
     .map((t) => `${t.direction === "inbound" ? "Customer" : "You (RydeTime)"}: ${t.body}`)
     .join("\n");
 
-  const anthropic = getAnthropic();
-  const response = await anthropic.messages.create({
-    model: AI_MODEL,
-    max_tokens: 500,
-    system: `${BDC_FOLLOWUP_SYSTEM_PROMPT}\n\n${context}\n\nCONVERSATION SO FAR:\n${transcript}`,
-    messages: [
-      { role: "user", content: "Write your next reply to the customer's most recent message now. Keep it short and human." },
-    ],
-  });
-
-  const raw = response.content
-    .filter((b): b is Extract<typeof b, { type: "text" }> => b.type === "text")
-    .map((b) => b.text)
-    .join("")
-    .trim();
+  const allCustomerText = history.filter((t) => t.direction === "inbound").map((t) => t.body ?? "").join("\n");
+  const { raw, held } = await draftWithoutPitch(
+    `${BDC_FOLLOWUP_SYSTEM_PROMPT}\n\n${context}\n\nCONVERSATION SO FAR:\n${transcript}`,
+    staffAnswer
+      ? `You told the customer you'd check with the team. The team just answered: "${staffAnswer}"\nWrite the message relaying that answer to the customer now, then move toward the next step. Use exactly the numbers the team gave. Do not tag NEEDS_HUMAN for the question the team just answered. Keep it short and human.`
+      : "Write your next reply to the customer's most recent message now. Keep it short and human.",
+    `${lead.message ?? ""}\n${allCustomerText}`,
+    Boolean(staffAnswer)
+  );
 
   const { body, tags } = extractTags(raw);
 
@@ -501,7 +529,8 @@ export async function draftFollowUp(
     matched_vehicle: vehicle,
     model: AI_MODEL,
     appointment: validAppointment(tags.appointment),
-    needs_human: tags.needsHuman,
+    needs_human: held ? HELD_REASON : tags.needsHuman,
     customer_name: tags.name,
+    held,
   };
 }
