@@ -23,7 +23,7 @@ import {
   getBdcLead,
   getThread,
   getBdcStatus,
-  findLatestNeedsHumanLead,
+  findNeedsHumanLeadsByCode,
 } from "@/lib/bdc/store";
 import { alertPhones } from "@/lib/bdc/escalate";
 import { pushLeadToDealerCenter } from "@/lib/bdc/pushToDealerCenter";
@@ -78,26 +78,47 @@ function isStaffPhone(from: string): boolean {
   return f.length === 10 && alertPhones().some((p) => last10(p) === f);
 }
 
+/** "#A1B2 yes we can do 1500 down" → { code: "A1B2", answer: "yes we can do 1500 down" }. */
+function parseStaffReply(body: string): { code: string; answer: string } | null {
+  const m = /^\s*#\s*([0-9a-f]{4})\b[\s:,.-]*([\s\S]*)$/i.exec(body);
+  return m ? { code: m[1].toUpperCase(), answer: m[2].trim() } : null;
+}
+
 /**
- * Relay a staff answer to the customer who is waiting on it (the most recent
- * lead still flagged needs_human), then text staff back who it went to.
+ * Relay a staff answer to the ONE customer named by the code at the front of
+ * the text (every alert says which code). A staff text without a code is
+ * NOT an answer — it returns false and is handled like any customer text, so
+ * Ryan can test the BDC from his own phone. It used to relay any staff text
+ * to whoever was waiting last, which sent a test photo to a real customer.
  */
-async function handleStaffReply(from: string, body: string): Promise<void> {
-  if (!body) return;
-  const leadId = await findLatestNeedsHumanLead();
-  if (!leadId) {
-    await sendSmsTo(from, "BDC: no customer is waiting on an answer right now, so I didn't send that anywhere.").catch(() => null);
-    return;
+async function handleStaffReply(from: string, body: string, numMedia: number): Promise<boolean> {
+  const parsed = parseStaffReply(body);
+  if (!parsed) return false;
+  const tell = (msg: string) => sendSmsTo(from, `BDC: ${msg}`).catch(() => null);
+
+  const matches = await findNeedsHumanLeadsByCode(parsed.code);
+  if (matches.length === 0) {
+    await tell(`no customer is waiting on #${parsed.code}, so I didn't send that to anyone.`);
+    return true;
   }
+  if (matches.length > 1) {
+    await tell(`more than one customer matches #${parsed.code}, so I didn't send that. Answer from ${DEALERSHIP.siteUrl}/admin/leads`);
+    return true;
+  }
+  if (!parsed.answer) {
+    await tell(`put your answer after the code, like "#${parsed.code} yes, we can do that". Nothing was sent.`);
+    return true;
+  }
+  const leadId = matches[0];
   const ctx = await getBdcLead(leadId);
   const who = ctx ? [ctx.first_name, ctx.last_name].filter(Boolean).join(" ") || ctx.reply_target || "the customer" : "the customer";
-  await addEvent(leadId, "staff_answered", body);
+  await addEvent(leadId, "staff_answered", parsed.answer);
   if (!ctx || ctx.opted_out || !isAIConfigured()) {
-    await sendSmsTo(from, `BDC: couldn't auto-relay to ${who}. Answer them from ${DEALERSHIP.siteUrl}/admin/leads/${leadId}`).catch(() => null);
-    return;
+    await tell(`couldn't auto-relay to ${who}. Answer them from ${DEALERSHIP.siteUrl}/admin/leads/${leadId}`);
+    return true;
   }
   const history = await getThread(leadId);
-  const draft = await draftFollowUp(ctx, history, body);
+  const draft = await draftFollowUp(ctx, history, parsed.answer);
   const result = await dispatchReply(draft);
   await logMessage({
     lead_id: leadId,
@@ -110,12 +131,13 @@ async function handleStaffReply(from: string, body: string): Promise<void> {
   });
   await setBdcStatus(leadId, "replied");
   await addEvent(leadId, result.ok ? "bdc_relayed_staff_answer" : "bdc_reply_drafted", result.ok ? `channel=${draft.channel}` : `not sent: ${result.skipped}`);
-  await sendSmsTo(
-    from,
-    result.ok
-      ? `BDC: sent to ${who}: "${draft.body.slice(0, 200)}"`
-      : `BDC: drafted for ${who} but not sent (${result.skipped}). ${DEALERSHIP.siteUrl}/admin/leads/${leadId}`
-  ).catch(() => null);
+  await tell(
+    (result.ok
+      ? `sent to ${who}: "${draft.body.slice(0, 200)}"`
+      : `drafted for ${who} but not sent (${result.skipped}). ${DEALERSHIP.siteUrl}/admin/leads/${leadId}`) +
+      (numMedia > 0 ? " (Pictures can't be passed along — only your text was used.)" : "")
+  );
+  return true;
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
@@ -132,11 +154,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const body = (params.Body || "").trim();
     const numMedia = parseInt(params.NumMedia || "0", 10) || 0;
 
-    // Staff (Ryan/Dawn) texting back an answer to a BDC alert. Their number may
-    // also sit on an old test lead, so this must run before the lead lookup or
-    // the bot would treat them like that customer.
-    if (from && isStaffPhone(from)) {
-      await handleStaffReply(from, body);
+    // Staff (Ryan/Dawn) answering a BDC alert: only when the text starts with
+    // the customer's #code. Anything else from a staff phone falls through and
+    // is treated like a normal customer text.
+    if (from && isStaffPhone(from) && (await handleStaffReply(from, body, numMedia))) {
       return twiml();
     }
 

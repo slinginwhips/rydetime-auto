@@ -11,6 +11,7 @@
  */
 import { sendSmsTo, sendEmailTo } from "@/lib/notificationProvider";
 import { DEALERSHIP } from "@/lib/dealership";
+import { staffReplyCode } from "./store";
 
 function list(envValue: string | undefined, fallback: string | undefined): string[] {
   const raw = envValue && envValue.trim() ? envValue : fallback || "";
@@ -50,6 +51,9 @@ export async function alertStaff(input: EscalationInput): Promise<{ sms: number;
     `RydeTime BDC needs you: ${name}${input.customerContact ? ` (${input.customerContact})` : ""}`,
     input.reason,
     input.lastMessage ? `They said: "${input.lastMessage.slice(0, 160)}"` : null,
+    input.leadId
+      ? `To answer by text, start your reply with #${staffReplyCode(input.leadId)}`
+      : null,
     leadUrl,
   ]
     .filter(Boolean)

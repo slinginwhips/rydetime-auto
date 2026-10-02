@@ -218,27 +218,30 @@ export async function setBdcStatus(lead_id: string, status: string): Promise<voi
 }
 
 /**
- * The lead most recently escalated to staff that is still waiting on an
- * answer. Used when Ryan/Dawn text back an answer to a BDC alert.
+ * The short code staff put at the front of a text to answer one specific
+ * waiting customer ("#A1B2 yes we can do 1500 down"). It's the start of the
+ * lead id, so it needs no extra column and is shown in every alert.
  */
-export async function findLatestNeedsHumanLead(): Promise<string | null> {
-  if (!hasDb()) return null;
-  const supabase = getSupabaseAdmin();
-  const { data: events } = await supabase
-    .from("lead_events")
-    .select("lead_id")
-    .eq("event_type", "bdc_needs_human")
-    .order("created_at", { ascending: false })
-    .limit(25);
-  const ids = [...new Set(((events ?? []) as { lead_id: string }[]).map((e) => e.lead_id))];
-  if (ids.length === 0) return null;
-  const { data: waiting } = await supabase
+export function staffReplyCode(leadId: string): string {
+  return leadId.replace(/-/g, "").slice(0, 4).toUpperCase();
+}
+
+/**
+ * Leads still waiting on a staff answer whose code matches. Never guesses:
+ * a relay goes to exactly one customer the staffer named by code, or nobody.
+ */
+export async function findNeedsHumanLeadsByCode(code: string): Promise<string[]> {
+  if (!hasDb()) return [];
+  const { data } = await getSupabaseAdmin()
     .from("leads")
     .select("id")
-    .in("id", ids)
-    .eq("bdc_status", "needs_human");
-  const open = new Set(((waiting ?? []) as { id: string }[]).map((l) => l.id));
-  return ids.find((id) => open.has(id)) ?? null;
+    .eq("bdc_status", "needs_human")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  const wanted = code.toUpperCase();
+  return ((data ?? []) as { id: string }[])
+    .map((l) => l.id)
+    .filter((id) => staffReplyCode(id) === wanted);
 }
 
 /** Mark a lead opted-out (STOP). Idempotent. */
