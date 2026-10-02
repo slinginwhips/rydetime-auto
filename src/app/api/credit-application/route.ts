@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { z } from "zod";
 import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import {
@@ -9,6 +9,7 @@ import {
 } from "@/lib/leadProvider";
 import { sendNotification } from "@/lib/notificationProvider";
 import { pushCreditAppToDms } from "@/lib/dmsCreditApp";
+import { bdcHandleWebsiteLead } from "@/lib/bdc/websiteLead";
 import { getVehicleById } from "@/lib/vehicles";
 import type { CreditApplicationSubmission } from "@/types/lead";
 import type { Vehicle } from "@/types/vehicle";
@@ -534,6 +535,29 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         .filter((l) => l !== null)
         .join("\n"),
     }).catch(() => undefined);
+
+    // AI BDC hello: a thank-you, this number, and where to text stips. Texted
+    // only when they ticked the optional SMS box on the form (the consent the
+    // A2P campaign was approved on); otherwise it goes by email if they gave
+    // one. Runs after the response; still gated by the BDC arm switch.
+    if (leadId && delivered && !honeypotTripped) {
+      const bdcLeadId = leadId;
+      after(() =>
+        bdcHandleWebsiteLead({
+          leadId: bdcLeadId,
+          first_name: app.first_name,
+          last_name: app.last_name,
+          email: app.email || null,
+          phone: app.sms_consent === true ? app.phone : null,
+          message: null,
+          lead_type: "credit_app",
+          vehicle,
+          vin: ctx.vin ?? null,
+          stock_number: ctx.stock_number ?? null,
+          source_url: app.source_url ?? null,
+        })
+      );
+    }
 
     if (!delivered) {
       return NextResponse.json(

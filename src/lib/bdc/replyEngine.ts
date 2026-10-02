@@ -101,6 +101,20 @@ function validAppointment(
 /** Every A2P first-touch SMS ends with this — business ID lives in the body. */
 const SMS_OPT_OUT = "Reply STOP to opt out.";
 
+/**
+ * First touch for someone who just submitted the signed credit application.
+ * The default prompt pushes everyone TOWARD the credit app; this customer is
+ * already past it, so the job is a thank-you, an intro to this number, and
+ * where to text stips.
+ */
+const CREDIT_APP_SITUATION = `SITUATION: This customer just submitted a signed credit application on our website. They have ALREADY applied.
+- Never ask them to fill out a credit application and never send the /finance link.
+- Thank them by first name and tell them the team is reviewing it and will reach out with their options (if we're closed, say when we open).
+- Introduce yourself as RydeTime Auto's assistant at this number.
+- Tell them that if the bank needs paperwork they can text it right here: proof of income (most recent paystub) and proof of residence (a utility bill dated within the last 30 days). Anything they send goes straight on their file.
+- Do not ask for any personal, credit, or application details, and don't quote approval odds or payments.
+- Keep it short — two or three sentences.`;
+
 const BDC_SYSTEM_PROMPT = `You are the RydeTime Auto BDC (business development center) rep sending the FIRST message to a customer who just submitted a lead on a car-shopping site. RydeTime Auto is a used-car dealership in Suffolk, VA (Hampton Roads).
 
 Your goal: get a real reply and move toward a test drive or a call. Sound like a real, friendly salesperson — warm, brief, human. Not corporate, not pushy, no emojis unless it feels natural (at most one).
@@ -303,7 +317,14 @@ export function planReply(lead: ParsedInboundLead, inventory: Vehicle[]): ReplyP
     link,
     matched_vehicle: vehicle,
     system: BDC_SYSTEM_PROMPT,
-    userMessage: `${guidance}\n\n${context}\n\nWrite the first message to ${customerLabel(lead)} now.`,
+    userMessage: [
+      guidance,
+      lead.suggested_lead_type === "credit_app" ? CREDIT_APP_SITUATION : null,
+      context,
+      `Write the first message to ${customerLabel(lead)} now.`,
+    ]
+      .filter(Boolean)
+      .join("\n\n"),
   };
 }
 
