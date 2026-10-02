@@ -244,6 +244,40 @@ export async function findNeedsHumanLeadsByCode(code: string): Promise<string[]>
     .filter((id) => staffReplyCode(id) === wanted);
 }
 
+/**
+ * Has a person taken this customer over? Status "manual" on ANY of their
+ * leads (matched by phone/email) means the bot stays quiet — set when a rep
+ * replies from the admin, or from the DMS when someone calls or texts them.
+ * Checked across every lead because a new form submission files a new lead,
+ * and that must not wake the bot back up mid-deal.
+ */
+export async function isContactPaused(contacts: (string | null | undefined)[]): Promise<boolean> {
+  if (!hasDb()) return false;
+  const list = [...new Set(contacts.map((c) => c?.trim()).filter((c): c is string => Boolean(c)))];
+  if (list.length === 0) return false;
+  const quoted = list.map((c) => `"${c.replace(/"/g, "")}"`).join(",");
+  const { data } = await getSupabaseAdmin()
+    .from("leads")
+    .select("id")
+    .eq("bdc_status", "manual")
+    .or(`reply_target.in.(${quoted}),phone.in.(${quoted}),email.in.(${quoted})`)
+    .limit(1);
+  return (data ?? []).length > 0;
+}
+
+/** Hand every paused lead for these contacts back to the bot. */
+export async function resumeContact(contacts: (string | null | undefined)[]): Promise<void> {
+  if (!hasDb()) return;
+  const list = [...new Set(contacts.map((c) => c?.trim()).filter((c): c is string => Boolean(c)))];
+  if (list.length === 0) return;
+  const quoted = list.map((c) => `"${c.replace(/"/g, "")}"`).join(",");
+  await getSupabaseAdmin()
+    .from("leads")
+    .update({ bdc_status: "replied" })
+    .eq("bdc_status", "manual")
+    .or(`reply_target.in.(${quoted}),phone.in.(${quoted}),email.in.(${quoted})`);
+}
+
 /** Mark a lead opted-out (STOP). Idempotent. */
 export async function setOptedOut(lead_id: string): Promise<void> {
   if (!hasDb()) return;

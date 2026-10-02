@@ -29,6 +29,27 @@ export function alertEmails(): string[] {
   return list(process.env.BDC_ALERT_EMAILS, process.env.NOTIFICATION_EMAIL);
 }
 
+/**
+ * A customer texted while the AI is paused for them (a person has them). The
+ * bot doesn't answer, so staff get it by text instead — never left unseen.
+ */
+export async function notifyStaffOfPausedMessage(input: {
+  leadId: string;
+  customerName: string;
+  body: string;
+  attachments: number;
+}): Promise<void> {
+  const files =
+    input.attachments > 0
+      ? `${input.attachments === 1 ? "A file" : `${input.attachments} files`} — saved to their file. `
+      : "";
+  const said = input.body ? `"${input.body.slice(0, 300)}" ` : "";
+  const sms = `RydeTime: ${input.customerName} texted (AI is paused for them, so it didn't answer): ${said}${files}Reply to them yourself. ${DEALERSHIP.siteUrl}/admin/leads/${input.leadId}`;
+  for (const phone of alertPhones()) {
+    await sendSmsTo(phone, sms).catch(() => null);
+  }
+}
+
 export interface EscalationInput {
   leadId: string | null;
   customerName: string | null;

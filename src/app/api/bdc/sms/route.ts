@@ -24,8 +24,9 @@ import {
   getThread,
   getBdcStatus,
   findNeedsHumanLeadsByCode,
+  isContactPaused,
 } from "@/lib/bdc/store";
-import { alertPhones } from "@/lib/bdc/escalate";
+import { alertPhones, notifyStaffOfPausedMessage } from "@/lib/bdc/escalate";
 import { pushLeadToDealerCenter } from "@/lib/bdc/pushToDealerCenter";
 import { sendSmsTo } from "@/lib/notificationProvider";
 import { DEALERSHIP } from "@/lib/dealership";
@@ -193,7 +194,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       body: body || (numMedia > 0 ? "(sent an attachment)" : ""),
       provider_sid: params.MessageSid || null,
     });
-    await setBdcStatus(lead.id, "replied");
+    // A person has this customer (they replied, called, or paused the AI from
+    // the DMS). Keep it that way: this status used to be reset to "replied"
+    // right here, so the bot jumped back in on the customer's very next text.
+    const paused = (await getBdcStatus(lead.id)) === "manual" || (await isContactPaused([from]));
+    if (!paused) await setBdcStatus(lead.id, "replied");
     await addEvent(lead.id, "customer_replied", numMedia > 0 ? `${numMedia} attachment(s)` : "text");
 
     // 3. Save MMS media (paperwork) to the lead's file.
@@ -219,9 +224,22 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // 4. Two-way loop: draft an automatic reply from the thread so far and send
     // it — gated by the SAME arm switch as first-touch (dispatchReply). When
     // disarmed, the draft is filed to the thread (sent=false) for review.
+    // Paused: the bot stays silent, and staff get the message by text so it
+    // doesn't sit unseen. Paperwork is already saved to their file above.
+    if (paused) {
+      const ctx = await getBdcLead(lead.id);
+      const who = ctx ? [ctx.first_name, ctx.last_name].filter(Boolean).join(" ") || from : from;
+      await notifyStaffOfPausedMessage({
+        leadId: lead.id,
+        customerName: who,
+        body,
+        attachments: numMedia,
+      });
+      await addEvent(lead.id, "bdc_paused_skip", "AI paused — staff notified instead of replying");
+      return twiml();
+    }
+
     try {
-      // A human who replies takes the wheel (status "manual"); the bot stops
-      // auto-answering that customer until it is handed back in the console.
       const status = await getBdcStatus(lead.id);
       if (isAIConfigured() && status !== "manual") {
         const ctx = await getBdcLead(lead.id);

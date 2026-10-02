@@ -5,7 +5,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminRequest } from "@/lib/adminAuth";
-import { addEvent, setBdcStatus, getBdcLead } from "@/lib/bdc/store";
+import { addEvent, setBdcStatus, getBdcLead, resumeContact } from "@/lib/bdc/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,6 +26,8 @@ export async function POST(
   }
 
   await setBdcStatus(id, "replied");
+  // The pause covers all of this customer's leads, so the hand-back does too.
+  await resumeContact([lead.reply_target, lead.phone, lead.email]);
   await addEvent(id, "bdc_resumed", "handed back to the BDC by a rep");
   return NextResponse.json({ ok: true });
 }

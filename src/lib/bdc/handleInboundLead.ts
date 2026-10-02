@@ -11,7 +11,7 @@ import { parseInboundLead } from "./parseInboundLead";
 import { draftFirstTouch } from "./replyEngine";
 import { dispatchReply } from "./dispatch";
 import { applyDraftTags } from "./applyDraftTags";
-import { findOrCreateLead, logMessage, addEvent, setBdcStatus, hasDb } from "./store";
+import { findOrCreateLead, logMessage, addEvent, setBdcStatus, hasDb, isContactPaused } from "./store";
 import { pushLeadToDealerCenter } from "./pushToDealerCenter";
 import { sendNotification } from "@/lib/notificationProvider";
 import type { ParsedInboundLead } from "@/types/bdc";
@@ -57,6 +57,14 @@ export async function handleInboundLead(
 
   if (rec.opted_out) {
     return { status: "opted_out", lead_id: rec.id, parsed };
+  }
+
+  // A person already has this customer — a new marketplace lead from them
+  // doesn't restart the bot.
+  if (await isContactPaused([parsed.reply_target, parsed.phone, parsed.email])) {
+    await setBdcStatus(rec.id, "manual");
+    await addEvent(rec.id, "bdc_skipped", "AI is paused for this customer — no automatic hello");
+    return { status: "drafted", lead_id: rec.id, parsed, detail: "ai-paused" };
   }
 
   return runFirstTouch(rec.id, parsed, opts);

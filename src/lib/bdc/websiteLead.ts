@@ -8,7 +8,7 @@
  * business and carries "Reply STOP" (applySmsCompliance).
  */
 import { runFirstTouch } from "./handleInboundLead";
-import { addEvent, setBdcStatus } from "./store";
+import { addEvent, isContactPaused, setBdcStatus } from "./store";
 import type { ParsedInboundLead } from "@/types/bdc";
 import type { LeadType } from "@/types/lead";
 import type { Vehicle } from "@/types/vehicle";
@@ -91,6 +91,13 @@ export async function bdcHandleWebsiteLead(input: WebsiteLeadInput): Promise<voi
   try {
     // Stamp the BDC fields so the console shows the thread and the reply box.
     await markBdcFields(input.leadId, parsed);
+    // Someone is already working this customer (called, texted, or paused the
+    // AI) — a new form from them must not restart the bot's conversation.
+    if (await isContactPaused([parsed.reply_target, parsed.phone, parsed.email])) {
+      await setBdcStatus(input.leadId, "manual");
+      await addEvent(input.leadId, "bdc_skipped", "AI is paused for this customer — no automatic hello");
+      return;
+    }
     const result = await runFirstTouch(input.leadId, parsed);
     console.log(`[bdc/website] lead=${input.leadId} → ${result.status}`);
   } catch (err) {
