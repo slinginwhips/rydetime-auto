@@ -4,8 +4,23 @@
     {
       "name": "rydetime-dev",
       "runtimeExecutable": "cmd.exe",
-      "runtimeArgs": ["/c", "set PATH=C:\\Program Files\\nodejs;%PATH% && npm run dev"],
+      "runtimeArgs": [
+        "/c",
+        "set PATH=C:\\Program Files\\nodejs;%PATH% && npm run dev"
+      ],
       "port": 3000
+    },
+    {
+      "name": "dms-staging",
+      "runtimeExecutable": "C:\\Program Files\\nodejs\\node.exe",
+      "runtimeArgs": [
+        "C:\\Users\\RydeTime Auto\\Desktop\\rydetime-dms\\node_modules\\next\\dist\\bin\\next",
+        "dev",
+        "-p",
+        "3100",
+        "C:\\Users\\RydeTime Auto\\Desktop\\rydetime-dms"
+      ],
+      "port": 3100
     }
   ]
 }
