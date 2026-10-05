@@ -140,6 +140,13 @@ export async function getVehiclesPage(
       default: q = q.order("created_at", { ascending: false });
     }
 
+    // Cars added by the same sync share a created_at (and many share a price or
+    // year), so every sort above has ties. Without a unique final key, Postgres
+    // may order tied rows differently for page 1 and page 2: some cars show on
+    // both pages and others on neither. The id makes the order total, so every
+    // car appears exactly once.
+    q = q.order("id", { ascending: true });
+
     q = q.range(offset, offset + limit - 1);
 
     const { data, error, count } = await q;
@@ -168,6 +175,7 @@ export async function getFeaturedVehicles(limit = 4): Promise<VehicleCard[]> {
       .in("status", PUBLIC_STATUSES)
       .eq("featured", true)
       .order("created_at", { ascending: false })
+      .order("id", { ascending: true })
       .limit(limit);
     if (error) throw error;
     return (data as Vehicle[]).map(toCard);
