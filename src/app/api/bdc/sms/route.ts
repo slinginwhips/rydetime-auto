@@ -26,7 +26,7 @@ import {
   findNeedsHumanLeadsByCode,
   isContactPaused,
 } from "@/lib/bdc/store";
-import { alertPhones, notifyStaffOfPausedMessage } from "@/lib/bdc/escalate";
+import { staffRoster, notifyStaffOfPausedMessage } from "@/lib/bdc/escalate";
 import { pushLeadToDealerCenter } from "@/lib/bdc/pushToDealerCenter";
 import { sendSmsTo } from "@/lib/notificationProvider";
 import { DEALERSHIP } from "@/lib/dealership";
@@ -74,9 +74,12 @@ function last10(phone: string): string {
   return phone.replace(/\D/g, "").slice(-10);
 }
 
-function isStaffPhone(from: string): boolean {
+/** The staff member behind this number, or null if it's not staff. name may be null (unnamed alert phone). */
+function findStaff(from: string): { name: string | null } | null {
   const f = last10(from);
-  return f.length === 10 && alertPhones().some((p) => last10(p) === f);
+  if (f.length !== 10) return null;
+  const hit = staffRoster().find((s) => last10(s.phone) === f);
+  return hit ? { name: hit.name } : null;
 }
 
 /** "#A1B2 yes we can do 1500 down" → { code: "A1B2", answer: "yes we can do 1500 down" }. */
@@ -152,14 +155,26 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     const from = (params.From || "").trim();
-    const body = (params.Body || "").trim();
+    let body = (params.Body || "").trim();
     const numMedia = parseInt(params.NumMedia || "0", 10) || 0;
 
-    // Staff (Ryan/Dawn) answering a BDC alert: only when the text starts with
-    // the customer's #code. Anything else from a staff phone falls through and
-    // is treated like a normal customer text.
-    if (from && isStaffPhone(from) && (await handleStaffReply(from, body, numMedia))) {
-      return twiml();
+    // Staff (Ryan/Dawn) are recognized by number. A text starting with the
+    // customer's #code is an answer to relay. "test:" at the front runs the
+    // rest as a normal customer text (so the BDC can still be tested from a
+    // staff phone). Anything else gets a short how-to — a staff text is never
+    // filed as a customer lead or alerted back to staff.
+    const staff = from ? findStaff(from) : null;
+    if (staff) {
+      if (await handleStaffReply(from, body, numMedia)) return twiml();
+      const testMatch = /^\s*test\s*:\s*([\s\S]*)$/i.exec(body);
+      if (!testMatch) {
+        await sendSmsTo(
+          from,
+          `BDC: Hey${staff.name ? ` ${staff.name}` : ""}, I know it's you. To answer a customer, start your text with their #code. To test me as a customer, start with "test:". Nothing was sent to anyone.`
+        ).catch(() => null);
+        return twiml();
+      }
+      body = testMatch[1].trim();
     }
 
     const matched = from ? await findLeadByContact(from) : null;

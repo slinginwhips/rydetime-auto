@@ -25,6 +25,22 @@ export function alertPhones(): string[] {
   return list(process.env.BDC_ALERT_PHONES, process.env.NOTIFICATION_PHONE);
 }
 
+/**
+ * Who is staff, by name. BDC_STAFF="Ryan:7577711246,Dawn:7577054455" (env, so
+ * numbers stay out of the repo). Alert phones count as staff too, unnamed.
+ */
+export function staffRoster(): { name: string | null; phone: string }[] {
+  const named = (process.env.BDC_STAFF || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => {
+      const i = s.indexOf(":");
+      return i > 0 ? { name: s.slice(0, i).trim(), phone: s.slice(i + 1).trim() } : { name: null, phone: s };
+    });
+  return [...named, ...alertPhones().map((phone) => ({ name: null, phone }))];
+}
+
 export function alertEmails(): string[] {
   return list(process.env.BDC_ALERT_EMAILS, process.env.NOTIFICATION_EMAIL);
 }
