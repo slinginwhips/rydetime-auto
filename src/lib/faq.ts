@@ -43,7 +43,7 @@ export const FAQS: FaqEntry[] = [
   {
     question: "How do I schedule a test drive?",
     answer:
-      "Use the 'Schedule Test Drive' button on any vehicle page, ask our AI assistant, or just call or text us at (757) 937-8664. Tell us when you'd like to come in and we'll have the vehicle ready. Bring a valid driver's license. Walk-ins are welcome too during business hours.",
+      "Use the 'Schedule Test Drive' button on any vehicle page, ask our AI assistant, or just call us at (757) 937-8664 or text us at (757) 937-7977. Tell us when you'd like to come in and we'll have the vehicle ready. Bring a valid driver's license. Walk-ins are welcome too during business hours.",
   },
   {
     question: "Are your prices negotiable?",

@@ -116,7 +116,7 @@ const LOCAL_PAGES: Record<string, LocalPageDef> = {
       },
       {
         heading: "Check Everything Before You Drive Over",
-        body: "Our website syncs automatically with the physical lot, so the inventory you see online is real. Full photo sets, specs, payment estimates, and Carfax links where available mean you can shortlist vehicles from Norfolk and only make the drive for the ones worth a test drive. Call or text (757) 937-8664 to confirm availability first.",
+        body: "Our website syncs automatically with the physical lot, so the inventory you see online is real. Full photo sets, specs, payment estimates, and Carfax links where available mean you can shortlist vehicles from Norfolk and only make the drive for the ones worth a test drive. Call (757) 937-8664 or text (757) 937-7977 to confirm availability first.",
       },
       {
         heading: "Getting Here From Norfolk",
@@ -468,9 +468,13 @@ export default async function LocalSEOPage({
           Visit Us at {DEALERSHIP.address.full}
         </h2>
         <p className="mx-auto mt-3 max-w-xl text-text-secondary">
-          Open {DEALERSHIP.hoursShort}. Call or text{" "}
+          Open {DEALERSHIP.hoursShort}. Call{" "}
           <a href={DEALERSHIP.phoneHref} className="text-accent hover:underline">
             {DEALERSHIP.phone}
+          </a>{" "}
+          or text{" "}
+          <a href={DEALERSHIP.smsHref} className="text-accent hover:underline">
+            {DEALERSHIP.smsPhone}
           </a>{" "}
           to confirm a vehicle is available before you drive over.
         </p>

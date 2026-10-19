@@ -27,9 +27,13 @@ export default function FAQPage() {
             Straight Answers to Real Questions.
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-relaxed text-text-secondary">
-            If you don&apos;t see your question here, call or text us at{" "}
+            If you don&apos;t see your question here, call us at{" "}
             <a href={DEALERSHIP.phoneHref} className="text-accent hover:underline">
               {DEALERSHIP.phone}
+            </a>{" "}
+            or text{" "}
+            <a href={DEALERSHIP.smsHref} className="text-accent hover:underline">
+              {DEALERSHIP.smsPhone}
             </a>{" "}
             — or ask our AI assistant any time.
           </p>

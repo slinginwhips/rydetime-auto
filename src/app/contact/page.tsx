@@ -5,7 +5,7 @@ import LeadForm from "@/components/LeadForm";
 export const metadata = generatePageMetadata({
   title: "Contact RydeTime Auto | 1913 Holland Road, Suffolk, VA",
   description:
-    "Visit, call, or text RydeTime Auto at 1913 Holland Road, Suffolk, VA 23434. Phone: (757) 937-8664. Open Mon-Fri 10AM-6PM, Sat 10AM-5PM.",
+    "Visit, call, or text RydeTime Auto at 1913 Holland Road, Suffolk, VA 23434. Call (757) 937-8664 or text (757) 937-7977. Open Mon-Fri 10AM-6PM, Sat 10AM-5PM.",
   path: "/contact",
 });
 

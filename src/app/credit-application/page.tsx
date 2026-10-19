@@ -87,9 +87,13 @@ export default async function CreditApplicationPage({
               <div className="rounded-lg border border-border-subtle bg-surface p-6">
                 <h2 className="text-base font-bold text-text-primary">Rather talk to a person?</h2>
                 <p className="mt-2 text-sm text-text-secondary">
-                  Call or text us at{" "}
+                  Call us at{" "}
                   <a href={DEALERSHIP.phoneHref} className="font-semibold text-accent hover:underline">
                     {DEALERSHIP.phone}
+                  </a>{" "}
+                  or text{" "}
+                  <a href={DEALERSHIP.smsHref} className="font-semibold text-accent hover:underline">
+                    {DEALERSHIP.smsPhone}
                   </a>{" "}
                   and we&apos;ll walk you through it.
                 </p>

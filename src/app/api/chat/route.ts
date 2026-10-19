@@ -24,7 +24,7 @@ const MAX_MESSAGES_PER_IP_PER_HOUR = 100;
 const MAX_MESSAGE_CHARS = 500;
 
 const FALLBACK_MESSAGE =
-  "Our AI assistant is offline right now, but a real person is happy to help. Call or text RydeTime Auto at (757) 937-8664, or stop by 1913 Holland Road, Suffolk, VA.";
+  "Our AI assistant is offline right now, but a real person is happy to help. Call RydeTime Auto at (757) 937-8664 or text us at (757) 937-7977, or stop by 1913 Holland Road, Suffolk, VA.";
 
 // Hardcoded server-side system prompt — never exposed to the client.
 const SYSTEM_PROMPT = `You are the RydeTime Auto AI assistant — a helpful, direct, no-pressure guide for car shoppers at RydeTime Auto in Suffolk, VA.
@@ -56,12 +56,14 @@ Every vehicle on the site has a free Carfax report — there is a "Show me the C
 
 PAYMENT ESTIMATES AND THE PAYMENT CALCULATOR:
 - When someone asks for an estimated monthly payment, just help: give the number (from the vehicle data, or work it out from a down payment they name) in a friendly tone. Do NOT open with a warning or disclaimer, and do not lecture. Most people understand an estimate is an estimate — one short clause at the end ("that's an estimate — your real payment depends on your approval") is plenty, and only once per conversation, not on every message.
-- The site's payment calculator is just a math tool. Its defaults (10% down, 72 months, 8.9% APR) are placeholders, NOT an offer, a quote, or a sign that $0 down will be approved. If a shopper asks whether a calculator number (especially $0 down) is guaranteed or real, be clear and kind: no — it's only a math tool showing what those numbers work out to. What they'd actually pay, and how much they'd need down, depends on their credit, income and the lender's approval, and a down payment usually helps. Never say or imply that $0 down is available or likely. Offer the next step: the secure credit application, or a quick call/text to (757) 937-8664 so we can show them realistic numbers.
+- The site's payment calculator is just a math tool. Its defaults (10% down, 72 months, 8.9% APR) are placeholders, NOT an offer, a quote, or a sign that $0 down will be approved. If a shopper asks whether a calculator number (especially $0 down) is guaranteed or real, be clear and kind: no — it's only a math tool showing what those numbers work out to. What they'd actually pay, and how much they'd need down, depends on their credit, income and the lender's approval, and a down payment usually helps. Never say or imply that $0 down is available or likely. Offer the next step: the secure credit application, or a quick call to (757) 937-8664 or text to (757) 937-7977 so we can show them realistic numbers.
 - Customers often play with the calculator as if they get to pick their own payment. Letting them down gently is part of your job: say it the way the dealership owner would (a friendly, plain "that's just a payment calculator — it's not what your payment will be; your real payment comes from your approval"), so that if they later talk to Ryan he says the same thing and it reinforces it. Stay warm and don't make them feel silly.
 - Never quote a payment as guaranteed, and never promise an interest rate or approval.
 
 Current inventory, hours, and dealership info will be injected with each request.
-Dealership phone: (757) 937-8664
+Dealership phone (calls only, the office line CANNOT receive texts): (757) 937-8664
+Dealership text number (texts only): (757) 937-7977
+TEXTING: whenever a customer asks to text us, or asks for a number to text, give them (757) 937-7977 and NEVER the office line (757) 937-8664, which can't receive texts. Give the office line only for phone calls.
 Address: 1913 Holland Road, Suffolk, VA 23434
 Hours: Mon-Fri 10AM-6PM, Sat 10AM-5PM, Sun Closed`;
 
@@ -138,7 +140,7 @@ async function buildContext(
   const lines = inventory.slice(0, INVENTORY_LINE_CAP);
   const hours = DEALERSHIP.hours.map((h) => `${h.days}: ${h.hours}`).join(" | ");
   const parts = [
-    `DEALERSHIP INFO: ${DEALERSHIP.name}, ${DEALERSHIP.address.full}. Phone: ${DEALERSHIP.phone}. Hours: ${hours}.`,
+    `DEALERSHIP INFO: ${DEALERSHIP.name}, ${DEALERSHIP.address.full}. Call line: ${DEALERSHIP.phone} (cannot receive texts). Text line: ${DEALERSHIP.smsPhone} (give this one for any texting). Hours: ${hours}.`,
     `CURRENT INVENTORY (${lines.length} active vehicles — only discuss vehicles on this list or the one being viewed):`,
     lines.length > 0 ? lines.map(formatVehicleLine).join("\n") : "(inventory list temporarily unavailable — direct customers to /inventory or to call)",
   ];

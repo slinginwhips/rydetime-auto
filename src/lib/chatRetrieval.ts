@@ -58,7 +58,7 @@ const EXTRA_KNOWLEDGE: KnowledgeEntry[] = [
     topic: "About RydeTime Auto",
     keywords: ["about", "who", "family", "owned", "independent", "dealer", "dealership", "ryan", "trust", "reviews", "location", "where", "address", "directions", "hours", "open", "closed"],
     text:
-      `${DEALERSHIP.name} is a family-owned and operated independent used car dealership at ${DEALERSHIP.address.full}, serving ${DEALERSHIP.serviceAreas.join(", ")}. Phone/text: ${DEALERSHIP.phone}. Hours: ${DEALERSHIP.hoursShort}. Honest cars, no-pressure process: clear prices in plain English, Carfax shared when available, browse as long as you want, bring your own mechanic, sleep on it.`,
+      `${DEALERSHIP.name} is a family-owned and operated independent used car dealership at ${DEALERSHIP.address.full}, serving ${DEALERSHIP.serviceAreas.join(", ")}. Call: ${DEALERSHIP.phone} (the office line can't receive texts). Text: ${DEALERSHIP.smsPhone}. Hours: ${DEALERSHIP.hoursShort}. Honest cars, no-pressure process: clear prices in plain English, Carfax shared when available, browse as long as you want, bring your own mechanic, sleep on it.`,
   },
   {
     id: "sell-your-car",
