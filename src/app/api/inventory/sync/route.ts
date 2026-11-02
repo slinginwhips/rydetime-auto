@@ -23,6 +23,13 @@ export const maxDuration = 300;
 /** Branded placeholder appended to vehicles with fewer than 10 feed photos. */
 const PLACEHOLDER_PHOTO_URL = "/images/fresh-arrival.jpg";
 
+/**
+ * Photos sent from the DMS ("Send to website") live in the DMS's public photo
+ * bucket. A car showing any of them is DMS-managed: the feed must not replace
+ * its photos, or the daily sync would put the DealerCenter set back.
+ */
+const DMS_PHOTO_URL_MARK = "/storage/v1/object/public/vehicle-photos/";
+
 interface ExistingVehicleRow {
   id: string;
   vin: string;
@@ -172,6 +179,21 @@ async function runSync(req: NextRequest): Promise<NextResponse> {
       overridesByVehicle.set(o.vehicle_id, fields);
     }
 
+    const dmsPhotoVehicleIds = new Set<string>();
+    for (let from = 0; ; from += 1000) {
+      const { data: dmsPhotos, error: dmsPhotoErr } = await supabase
+        .from("vehicle_photos")
+        .select("vehicle_id")
+        .like("url", `%${DMS_PHOTO_URL_MARK}%`)
+        .order("id")
+        .range(from, from + 999);
+      if (dmsPhotoErr) throw dmsPhotoErr;
+      for (const p of (dmsPhotos ?? []) as { vehicle_id: string }[]) {
+        dmsPhotoVehicleIds.add(p.vehicle_id);
+      }
+      if ((dmsPhotos ?? []).length < 1000) break;
+    }
+
     const feedVins = new Set<string>();
 
     for (const dc of feed.vehicles) {
@@ -204,10 +226,14 @@ async function runSync(req: NextRequest): Promise<NextResponse> {
         // Replace photos. Vehicles with fewer than 10 real photos get the branded
         // "Fresh Arrival — more photos after detail" card appended as the last
         // slide (it becomes the primary/only image for vehicles with none).
+        // DMS-managed cars keep the photos the DMS sent.
         const photoUrls =
           dc.photo_urls.length < 10 ? [...dc.photo_urls, PLACEHOLDER_PHOTO_URL] : dc.photo_urls;
-        await supabase.from("vehicle_photos").delete().eq("vehicle_id", vehicleId);
-        if (photoUrls.length > 0) {
+        const dmsManagedPhotos = dmsPhotoVehicleIds.has(vehicleId);
+        if (!dmsManagedPhotos) {
+          await supabase.from("vehicle_photos").delete().eq("vehicle_id", vehicleId);
+        }
+        if (!dmsManagedPhotos && photoUrls.length > 0) {
           const { error: photoErr } = await supabase.from("vehicle_photos").insert(
             photoUrls.map((url, i) => ({
               vehicle_id: vehicleId,
