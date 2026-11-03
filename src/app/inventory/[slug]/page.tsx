@@ -11,6 +11,7 @@ import StickySentinel from "@/components/StickySentinel";
 import Reveal from "@/components/Reveal";
 import VDPActions from "@/components/VDPActions";
 import { getVehicleBySlug, getSimilarVehicles } from "@/lib/vehicles";
+import { getDmsSpin } from "@/lib/dmsSpin";
 import { getCarfaxProvider } from "@/lib/carfaxProvider";
 import { estimateMonthlyPayment } from "@/types/vehicle";
 import {
@@ -46,7 +47,7 @@ export default async function VehicleDetailPage({ params }: VDPProps) {
   if (!vehicle) notFound();
 
   const title = vehicleTitle(vehicle);
-  const similar = await getSimilarVehicles(vehicle, 6);
+  const [similar, spin] = await Promise.all([getSimilarVehicles(vehicle, 6), getDmsSpin(vehicle.vin)]);
   const monthly = estimateMonthlyPayment(vehicle.price);
 
   const mpg =
@@ -153,7 +154,7 @@ export default async function VehicleDetailPage({ params }: VDPProps) {
         <div className="mt-5 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_360px]">
           {/* ============ Main column ============ */}
           <div className="min-w-0 space-y-10">
-            <VehicleGallery photos={photos} alt={title} />
+            <VehicleGallery photos={photos} alt={title} spin={spin} />
 
             {/* Video */}
             {vehicle.video_url && (

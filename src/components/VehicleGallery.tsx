@@ -3,23 +3,32 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import Logo from "@/components/Logo";
+import SpinViewer from "@/components/SpinViewer";
+import type { DmsSpin } from "@/lib/dmsSpin";
 import type { VehiclePhoto } from "@/types/vehicle";
 
 interface VehicleGalleryProps {
   photos: VehiclePhoto[];
   alt: string;
+  /** 360 walk-around from the DMS, when the car has a live one. */
+  spin?: DmsSpin | null;
 }
 
-export default function VehicleGallery({ photos, alt }: VehicleGalleryProps) {
+export default function VehicleGallery({ photos, alt, spin }: VehicleGalleryProps) {
   const sorted = [...photos].sort((a, b) => {
     if (a.is_primary !== b.is_primary) return a.is_primary ? -1 : 1;
     return a.sort_order - b.sort_order;
   });
   const [index, setIndex] = useState(0);
   const [lightbox, setLightbox] = useState(false);
+  const [spinMode, setSpinMode] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
 
   const count = sorted.length;
+  const hasSpin = Boolean(spin && spin.frames.length > 1);
+  // The spin sits over the photo track (which stays mounted, keeping its
+  // scroll position) — and is all there is when a car has no photos yet.
+  const showSpin = hasSpin && (spinMode || count === 0);
 
   const go = useCallback(
     (next: number) => {
@@ -58,7 +67,7 @@ export default function VehicleGallery({ photos, alt }: VehicleGalleryProps) {
     };
   }, [lightbox, index, go]);
 
-  if (count === 0) {
+  if (count === 0 && !hasSpin) {
     return (
       <div className="flex aspect-[4/3] w-full items-center justify-center rounded-lg border border-border-subtle bg-background-card">
         <div className="text-center">
@@ -103,8 +112,30 @@ export default function VehicleGallery({ photos, alt }: VehicleGalleryProps) {
           ))}
         </div>
 
+        {showSpin && spin && (
+          <div className="absolute inset-0 z-[5]">
+            <SpinViewer frames={spin.frames} aspect={spin.aspect} alt={alt} />
+          </div>
+        )}
+
+        {/* Photos / 360° switch */}
+        {hasSpin && count > 0 && (
+          <button
+            type="button"
+            onClick={() => setSpinMode((on) => !on)}
+            aria-pressed={showSpin}
+            className={`absolute left-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold backdrop-blur transition-colors ${
+              showSpin
+                ? "bg-background/70 text-text-primary hover:bg-background/90"
+                : "bg-accent text-white hover:opacity-90"
+            }`}
+          >
+            {showSpin ? "Back to photos" : <><SpinIcon /> 360° View</>}
+          </button>
+        )}
+
         {/* Arrows (desktop) */}
-        {count > 1 && (
+        {count > 1 && !showSpin && (
           <>
             <button
               type="button"
@@ -126,22 +157,38 @@ export default function VehicleGallery({ photos, alt }: VehicleGalleryProps) {
         )}
 
         {/* Photo count indicator */}
-        <div className="tabular absolute bottom-3 right-3 rounded bg-background/70 px-2.5 py-1 text-xs font-medium text-text-primary backdrop-blur">
+        <div className={`tabular absolute bottom-3 right-3${showSpin ? " hidden" : ""} rounded bg-background/70 px-2.5 py-1 text-xs font-medium text-text-primary backdrop-blur`}>
           {index + 1} / {count}
         </div>
       </div>
 
       {/* Thumbnails */}
-      {count > 1 && (
+      {(count > 1 || (hasSpin && count > 0)) && (
         <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+          {hasSpin && (
+            <button
+              type="button"
+              onClick={() => setSpinMode(true)}
+              aria-label="View the 360° spin"
+              className={`flex h-16 w-24 flex-shrink-0 flex-col items-center justify-center gap-0.5 rounded border bg-background-card text-xs font-semibold text-text-primary transition-all duration-300 ${
+                showSpin ? "border-accent opacity-100" : "border-border-subtle opacity-80 hover:opacity-100"
+              }`}
+            >
+              <SpinIcon />
+              360°
+            </button>
+          )}
           {sorted.map((photo, i) => (
             <button
               key={photo.id}
               type="button"
-              onClick={() => go(i)}
+              onClick={() => {
+                setSpinMode(false);
+                go(i);
+              }}
               aria-label={`View photo ${i + 1}`}
               className={`relative h-16 w-24 flex-shrink-0 overflow-hidden rounded border transition-all duration-300 ${
-                i === index ? "border-accent opacity-100" : "border-border-subtle opacity-60 hover:opacity-100"
+                i === index && !showSpin ? "border-accent opacity-100" : "border-border-subtle opacity-60 hover:opacity-100"
               }`}
             >
               <Image
@@ -214,6 +261,25 @@ export default function VehicleGallery({ photos, alt }: VehicleGalleryProps) {
         </div>
       )}
     </div>
+  );
+}
+
+function SpinIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <ellipse cx="12" cy="12" rx="9" ry="4" />
+      <polyline points="16 6 19 8 16 10" />
+    </svg>
   );
 }
 
