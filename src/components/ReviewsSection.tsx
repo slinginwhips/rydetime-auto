@@ -11,7 +11,7 @@ interface ReviewsSectionProps {
  */
 export const GOOGLE_RATING = {
   rating: 4.9,
-  reviewCount: 190,
+  reviewCount: 200,
 };
 
 // Real Google reviews (lightly trimmed for length; typos cleaned).
